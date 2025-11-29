@@ -1,0 +1,5 @@
+# Hydra instantiation config for InverseCDF noise schedule for CANDI
+_target_: discrete_diffusion.noise_schedules.inverse_cdf.InverseCDF
+eps: 1e-3
+r_max: .45
+r_min: .05

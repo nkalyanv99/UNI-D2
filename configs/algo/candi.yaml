@@ -4,10 +4,12 @@ defaults:
 _target_: discrete_diffusion.algorithms.candi.CANDI
 name: candi 
 backbone: dit_candi
+T: -1
 causal_attention: False
 ignore_bos: False
-
-shift_loss_targets: false
+parameterization: subs
+time_conditioning: False
+temp: 1.0
 
 # Step 7: configurable schedule + forward process (CANDI specific)
 # CANDI uses hybrid corruption, but is implemented in standard noise schedule API for compatibility

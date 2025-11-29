@@ -1,0 +1,13 @@
+predictor: candi 
+steps: 128
+use_float64: True
+p_nucleus: 1.0
+num_sample_batches: 1
+num_sample_log: 2
+stride_length: 1
+num_strides: 1
+inject_bos: True
+save_samples: false
+samples_path: null
+sampler:
+  _target_: discrete_diffusion.sampling.candi_sampler.CANDI_Sampler

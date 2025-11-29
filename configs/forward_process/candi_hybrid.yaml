@@ -1,6 +1,6 @@
 # Hydra instantiation config for Absorbing forward process
 # Note: tokenizer and schedule must be passed at runtime
-_target_: discrete_diffusion.candi_hybrid.HybridForwardCANDI
+_target_: discrete_diffusion.forward_process.candi_hybrid.HybridForwardCANDI
 
 # Legacy name field for backward compatibility
 name: candi_hybrid 

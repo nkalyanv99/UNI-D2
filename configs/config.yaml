@@ -6,12 +6,12 @@ defaults:
     - learning_rate_monitor
     - sample_saver
   - /data: text8 
-  - /model: small_candi
+  - /model: tiny_candi
   - /strategy: ddp
-  - /noise: log-linear
+  - /noise: inverse-cdf
   - /lr_scheduler: constant_warmup
   - /prior: none
-  - /sampling: default
+  - /sampling: candi
   - /algo: candi
 
 seed: 1
