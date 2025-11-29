@@ -1,7 +1,7 @@
 train: wikitext103
 valid: wikitext103
 tokenizer_name_or_path: gpt2
-cache_dir: /share/kuleshov/ssahoo/textdiffusion/data
+cache_dir: ${scratch_dir}/wikitext103
 wrap: True
 streaming: False
 insert_train_eos: True

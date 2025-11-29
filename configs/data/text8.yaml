@@ -2,7 +2,7 @@
 train: text8
 valid: text8
 tokenizer_name_or_path: text8
-cache_dir: /share/kuleshov/ssahoo/textdiffusion/data
+cache_dir: ${scratch_dir}/text8
 wrap: True
 streaming: False
 insert_train_eos: True

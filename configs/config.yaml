@@ -5,17 +5,19 @@ defaults:
     - checkpoint_monitor
     - learning_rate_monitor
     - sample_saver
-  - /data: openwebtext
-  - /model: small
+  - /data: text8 
+  - /model: small_candi
   - /strategy: ddp
   - /noise: log-linear
   - /lr_scheduler: constant_warmup
   - /prior: none
   - /sampling: default
-  - /algo: bd3lm
+  - /algo: candi
 
 seed: 1
 
+# base directory for caching datasets and models 
+scratch_dir:  /home/patrick/.cache/discrete_diffusion
 block_size: ${model.length}
 
 neg_infinity_mode: large-finite  # large-finite / true-inf

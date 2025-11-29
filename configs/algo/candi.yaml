@@ -1,0 +1,16 @@
+defaults:
+  - /forward_process: candi_hybrid
+
+_target_: discrete_diffusion.algorithms.candi.CANDI
+name: candi 
+backbone: dit_candi
+causal_attention: False
+ignore_bos: False
+
+shift_loss_targets: false
+
+# Step 7: configurable schedule + forward process (CANDI specific)
+# CANDI uses hybrid corruption, but is implemented in standard noise schedule API for compatibility
+noise_schedule:
+  name: inverse_cdf
+  eps: ${noise.eps}
