@@ -1,7 +1,7 @@
 train: openwebtext-train
 valid: openwebtext-valid
 tokenizer_name_or_path: gpt2
-cache_dir: /home/hk-project-p0023960/hgf_nhz3359/New_Discrete_Diffusion-main/datasets/pgm_owt/
+cache_dir: ${scratch_dir}/openwebtext
 wrap: True
 chunking: none
 streaming: False
