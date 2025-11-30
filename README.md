@@ -36,6 +36,20 @@ pip install flash-attn --no-build-isolation  # optional
 
 The `pyproject.toml`/`requirements.txt` pair declare the dependencies that power training, evaluation, and sampling.
 
+### Configuration
+
+The library caches datasets and artifacts in `~/.cache/discrete_diffusion` by default. You can customize this location in two ways:
+
+1. **Environment Variable (Recommended):**
+   ```bash
+   export DISCRETE_DIFFUSION_SCRATCH_DIR="/path/to/your/data"
+   ```
+
+2. **Command Line Override:**
+   ```bash
+   python -m discrete_diffusion ... scratch_dir=/path/to/your/data
+   ```
+
 ## How to run
 
 ### Training experiments

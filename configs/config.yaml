@@ -17,7 +17,7 @@ defaults:
 seed: 1
 
 # base directory for caching datasets and models 
-scratch_dir:  /home/patrick/.cache/discrete_diffusion
+scratch_dir: ${oc.env:DISCRETE_DIFFUSION_SCRATCH_DIR,${oc.env:HOME}/.cache/discrete_diffusion}
 block_size: ${model.length}
 
 neg_infinity_mode: large-finite  # large-finite / true-inf
