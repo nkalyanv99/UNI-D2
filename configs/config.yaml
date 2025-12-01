@@ -79,7 +79,7 @@ trainer:
   check_val_every_n_epoch: null
 
 wandb:
-  project: partition-generative-modeling
+  project: UNI-D2
   notes: null
   group: null
   job_type: null

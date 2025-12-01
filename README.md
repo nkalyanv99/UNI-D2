@@ -56,7 +56,7 @@ The library caches datasets and artifacts in `~/.cache/discrete_diffusion` by de
 Run the Hydra-powered CLI exported at `src/discrete_diffusion/__main__.py` with dataset/model/algorithm overrides. A minimal example inspired by the scripts in `scripts/train/`:
 ```bash
 PYTHONPATH=src python -u -m discrete_diffusion \
-  data=owt \
+  data=openwebtext-split \
   model=small \
   algo=mdlm \
   loader.batch_size=32 \

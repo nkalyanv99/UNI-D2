@@ -9,7 +9,6 @@ export PYTHONPATH=src
 python -u -m discrete_diffusion \
     neg_infinity_mode="true-inf" \
     data=openwebtext-split \
-    data.cache_dir='/home/hk-project-p0023960/hgf_nhz3359/New_Discrete_Diffusion-main/datasets/pgm_owt/' \
     model=small-encoder-decoder \
     model.encoder.n_blocks=6 \
     model.decoder.n_blocks=6 \

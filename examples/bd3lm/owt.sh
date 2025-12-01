@@ -25,7 +25,6 @@ python -u -m discrete_diffusion \
     algo=bd3lm \
     algo.clip_search_widths=[0.5,0.6,0.7,0.8,0.9] \
     data=openwebtext-split \
-    data.cache_dir=/home/hk-project-p0023960/hgf_nhz3359/New_Discrete_Diffusion-main/datasets/pgm_owt \
     data.insert_train_eos=True \
     data.insert_valid_eos=True \
     data.insert_train_special=True \

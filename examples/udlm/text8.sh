@@ -11,7 +11,6 @@ python -u -m discrete_diffusion \
     data.valid=text8 \
     data.wrap=true \
     data.tokenizer_name_or_path=text8 \
-    data.cache_dir='/home/hk-project-p0023960/hgf_nhz3359/New_Discrete_Diffusion-main/datasets/' \
     model=small \
     model.length=256 \
     algo=udlm \

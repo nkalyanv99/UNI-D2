@@ -8,7 +8,6 @@ export PYTHONPATH=src
 
 python -u -m discrete_diffusion \
     data=openwebtext-split \
-    data.cache_dir='/home/hk-project-p0023960/hgf_nhz3359/New_Discrete_Diffusion-main/datasets/pgm_owt/' \
     model=small \
     algo=mdlm \
     training.torch_compile=true \

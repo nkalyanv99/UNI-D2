@@ -3,9 +3,6 @@ import math
 import pdb
 import typing
 
-import einops
-import flash_attn
-import flash_attn.layers.rotary
 import huggingface_hub
 import omegaconf
 import torch
