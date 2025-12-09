@@ -1,7 +1,7 @@
 train: synthetic
 valid: synthetic
 tokenizer_name_or_path: synthetic
-cache_dir: /share/kuleshov/ssahoo/textdiffusion/data
+cache_dir: ${scratch_dir}/synthetic
 wrap: True
 streaming: True
 insert_train_eos: True
