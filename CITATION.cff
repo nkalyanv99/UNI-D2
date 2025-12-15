@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: >
+  If you use UNI-D² in your research, please cite it as described here.
+  Co-first authors: Kalyan Varma Nadimpalli and Vincent Pauline.
+type: software
+title: "UNI-D²: A Unified Codebase for Discrete Diffusion Language Models"
+version: "0.1.0"
+url: "https://nkalyanv99.github.io/UNI-D2/"
+repository-code: "https://github.com/nkalyanv99/UNI-D2"
+license: MIT
+keywords:
+  - diffusion
+  - discrete diffusion
+  - language models
+  - deep learning
+  - pytorch
+  - generative models
+abstract: >-
+  UNI-D² is a modular research codebase for discrete diffusion language models that provides unified training, evaluation, and benchmarking pipelines. 
+  It serves as a common foundation for rapid experimentation and enables consistent, comparable evaluation across discrete diffusion methods.
+authors:
+  - family-names: "Nadimpalli"
+    given-names: "Kalyan Varma"
+  - family-names: "Pauline"
+    given-names: "Vincent"
+  - family-names: "Kapl"
+    given-names: "Ferdinand"
+  - family-names: "Karimi-Mamaghan"
+    given-names: "Amir Mohammad"
+  - family-names: "Tong"
+    given-names: "Alexander"
+  - family-names: "Dittadi"
+    given-names: "Andrea"
+  - family-names: "Bauer"
+    given-names: "Stefan"
