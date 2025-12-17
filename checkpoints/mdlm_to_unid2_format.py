@@ -6,6 +6,7 @@ expected by the UNI-D2 codebase, specifically for use with generate_samples.py.
 """
 
 import torch
+import transformers
 from omegaconf import OmegaConf
 from pathlib import Path
 from hydra import compose, initialize_config_dir
@@ -113,18 +114,116 @@ def convert_checkpoint(input_path: str, output_path: str):
     print(f"  - Vocab size from state_dict: {actual_vocab_size}")
     print(f"  - Using vocab_size: {actual_vocab_size}")
     
-    # IMPORTANT: Set mask_token to PAD token position
-    # The checkpoint was trained with:
-    #   - tokenizer.vocab_size = 50257 (base GPT2, ignores added PAD)
-    #   - mask_index = tokenizer.vocab_size = 50257 (the PAD token position!)
-    #   - vocab_size = 50258 for model (after +=1)
-    #   - Embeddings [50258, 768] where index 50257 serves as BOTH PAD and MASK
-    print(f"  - Setting mask_token to PAD token (index {tokenizer.pad_token_id})")
-    tokenizer.mask_token = tokenizer.pad_token  # Use PAD as mask
-    tokenizer.mask_token_id = tokenizer.pad_token_id  # 50257
-    print(f"    len(tokenizer): {len(tokenizer)}")
-    print(f"    mask_token: {tokenizer.mask_token} (id={tokenizer.mask_token_id})")
-    print(f"    PAD and MASK share the same embedding at index {tokenizer.pad_token_id}")
+    # ============================================================================
+    # IMPORTANT: Align checkpoint with fresh tokenizer from get_tokenizer(config)
+    # ============================================================================
+    # Fresh GPT2 tokenizer from get_tokenizer() will have:
+    #   - pad_token='[PAD]' at position 50257
+    #   - mask_token='[MASK]' at position 50258
+    #   - vocab_size = 50259
+    #
+    # We need to align the checkpoint to match this structure
+    
+    print(f"  - Aligning checkpoint with fresh tokenizer structure")
+    
+    # Get current vocab size from embeddings
+    current_vocab_size = ckpt['state_dict']['backbone.vocab_embed.embedding'].shape[0]
+    print(f"    Current embedding size: {current_vocab_size}")
+    
+    # Create tokenizer matching fresh get_tokenizer() behavior
+    print(f"    Configuring tokenizer to match get_tokenizer() output:")
+    
+    # Base GPT2 tokenizer
+    base_tokenizer = transformers.AutoTokenizer.from_pretrained("gpt2")
+    
+    # Add PAD token (get_tokenizer adds this at position 50257)
+    if base_tokenizer.pad_token is None:
+        base_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    print(f"      pad_token: {base_tokenizer.pad_token} (id={base_tokenizer.pad_token_id})")
+    
+    # Add MASK token (get_tokenizer adds this at position 50258)
+    if getattr(base_tokenizer, 'mask_token', None) is None:
+        base_tokenizer.add_special_tokens({'mask_token': '[MASK]'})
+    print(f"      mask_token: {base_tokenizer.mask_token} (id={base_tokenizer.mask_token_id})")
+    
+    target_vocab_size = len(base_tokenizer)
+    print(f"    Target vocab size: {target_vocab_size}")
+    
+    # Expand and remap embeddings
+    print(f"  - Expanding embeddings from [{current_vocab_size}, 768] to [{target_vocab_size}, 768]")
+    
+    old_embeddings = ckpt['state_dict']['backbone.vocab_embed.embedding']
+    new_embeddings = torch.zeros(target_vocab_size, old_embeddings.shape[1])
+    
+    # Copy base vocabulary (0-50256)
+    new_embeddings[:50257] = old_embeddings[:50257]
+    
+    # Position 50257: PAD token (copy from EOS embedding at 50256)
+    new_embeddings[50257] = old_embeddings[50256].clone()
+    print(f"    Position 50257 (PAD): copied from EOS embedding")
+    
+    # Position 50258: MASK token (move from pretrained position 50257)
+    new_embeddings[50258] = old_embeddings[50257].clone()
+    print(f"    Position 50258 (MASK): copied from pretrained MASK embedding")
+    
+    # Update state_dict with new embeddings
+    ckpt['state_dict']['backbone.vocab_embed.embedding'] = new_embeddings
+    
+    # Also update output projection if it exists
+    if 'backbone.output_layer.linear.weight' in ckpt['state_dict']:
+        old_output = ckpt['state_dict']['backbone.output_layer.linear.weight']
+        new_output = torch.zeros(target_vocab_size, old_output.shape[1])
+        new_output[:50257] = old_output[:50257]
+        new_output[50257] = old_output[50256].clone()  # PAD from EOS
+        new_output[50258] = old_output[50257].clone()  # MASK from pretrained
+        ckpt['state_dict']['backbone.output_layer.linear.weight'] = new_output
+        print(f"    Updated output projection weight")
+    
+    if 'backbone.output_layer.linear.bias' in ckpt['state_dict']:
+        old_bias = ckpt['state_dict']['backbone.output_layer.linear.bias']
+        new_bias = torch.zeros(target_vocab_size)
+        new_bias[:50257] = old_bias[:50257]
+        new_bias[50257] = old_bias[50256].clone()  # PAD from EOS
+        new_bias[50258] = old_bias[50257].clone()  # MASK from pretrained
+        ckpt['state_dict']['backbone.output_layer.linear.bias'] = new_bias
+        print(f"    Updated output projection bias")
+    
+    print(f"  ✓ Embeddings expanded and remapped")
+    print(f"    - Position 50256: EOS")
+    print(f"    - Position 50257: PAD (new, copied from EOS)")
+    print(f"    - Position 50258: MASK (from pretrained position 50257)")
+    
+    # Update EMA shadow params if they exist
+    if 'ema' in ckpt and 'shadow_params' in ckpt['ema']:
+        print(f"  - Updating EMA shadow parameters")
+        shadow_params = ckpt['ema']['shadow_params']
+        
+        # Find and update all EMA parameters that have vocab_size dimension
+        for i, param in enumerate(shadow_params):
+            if param.shape == torch.Size([current_vocab_size, 768]):
+                # 2D param with vocab size (embedding or output weight)
+                old_param = param
+                new_param = torch.zeros(target_vocab_size, old_param.shape[1])
+                new_param[:50257] = old_param[:50257]
+                new_param[50257] = old_param[50256].clone()
+                new_param[50258] = old_param[50257].clone()
+                shadow_params[i] = new_param
+                print(f"    Updated EMA param[{i}] shape: {old_param.shape} -> {new_param.shape}")
+            elif param.shape == torch.Size([current_vocab_size]):
+                # 1D param with vocab size (output bias)
+                old_param = param
+                new_param = torch.zeros(target_vocab_size)
+                new_param[:50257] = old_param[:50257]
+                new_param[50257] = old_param[50256].clone()
+                new_param[50258] = old_param[50257].clone()
+                shadow_params[i] = new_param
+                print(f"    Updated EMA param[{i}] shape: {old_param.shape} -> {new_param.shape}")
+        
+        ckpt['ema']['shadow_params'] = shadow_params
+        print(f"  ✓ EMA parameters updated")
+    
+    # Update tokenizer in checkpoint
+    tokenizer = base_tokenizer
     
     # Update hyper_parameters
     ckpt['hyper_parameters']['config'] = new_config
