@@ -84,6 +84,15 @@ playing your craft and the game and you don't see that.
 **Note on Sample Format:**
 The samples start mid-sentence because the MDLM model was trained with `wrap=True` data preprocessing, which concatenates documents and chunks them at fixed intervals. This means training sequences can start at any point in a document (not just at natural boundaries), and the model learned to generate from this distribution. This is expected behavior and matches the training setup described in the MDLM paper.
 
+### 5. Fine-tuning Script
+
+Added `examples/mdlm/owt_finetune.sh` to fine-tune the MDLM checkpoint with padding-based training (`wrap=False`). The script supports configurable sequence lengths via the `MAX_LENGTH` environment variable (default: 1024).
+
+**Usage:**
+```bash
+MAX_LENGTH=128 bash examples/mdlm/owt_finetune.sh
+```
+
 ### Files Modified/Created
 
 **Created:**
@@ -91,6 +100,7 @@ The samples start mid-sentence because the MDLM model was trained with `wrap=Tru
 - `checkpoints/mdlm_full.ckpt` - Converted checkpoint (not in repo, generated locally)
 - `samples_mdlm_ema.pt` - Generated samples tensor
 - `samples_mdlm_ema.txt` - Generated samples as text
+- `examples/mdlm/owt_finetune.sh` - Fine-tuning script with padding support
 
 **Modified:**
 - `src/discrete_diffusion/evaluations/generate_samples.py` - Added EMA activation and checkpoint tokenizer loading
