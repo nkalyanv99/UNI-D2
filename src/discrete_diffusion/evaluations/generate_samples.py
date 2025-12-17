@@ -39,9 +39,14 @@ def main(cfg):
     if not isinstance(model_config, (dict, list, OmegaConf.get_type("DictConfig"), OmegaConf.get_type("ListConfig"))):
          model_config = OmegaConf.create(model_config)
     
-    # Get tokenizer
+    # Get tokenizer - use the one from checkpoint to ensure compatibility
     print("Loading tokenizer...")
-    tokenizer = get_tokenizer(model_config)
+    if 'tokenizer' in ckpt['hyper_parameters']:
+        print("Using tokenizer from checkpoint")
+        tokenizer = ckpt['hyper_parameters']['tokenizer']
+    else:
+        print("Creating new tokenizer from config")
+        tokenizer = get_tokenizer(model_config)
     
     # Identify algorithm class
     algo_target = model_config.algo._target_
@@ -60,6 +65,11 @@ def main(cfg):
     
     model.to(device)
     model.eval()
+    
+    # IMPORTANT: Activate EMA weights for generation
+    if hasattr(model, '_eval_mode'):
+        print("Activating EMA weights...")
+        model._eval_mode()
     
     if cfg.torch_compile:
         print("Compiling model...")

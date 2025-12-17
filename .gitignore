@@ -57,3 +57,5 @@ tmp*/
 *.bin
 *.h5
 *.hdf5
+
+checkpoints/
