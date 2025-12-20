@@ -1,0 +1,12 @@
+# Small FlexMDM model config matching original FlexMDM wikitext2 settings
+_target_: discrete_diffusion.models.flexmdm_transformer.AnyOrderMaskInsertionFlow
+name: flexmdm-small
+type: flexmdm-anyorder
+hidden_size: 256
+cond_dim: 64
+length: 512
+n_blocks: 4
+n_heads: 4
+dropout: 0.1
+mask_token: null
+pad_token: null

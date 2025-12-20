@@ -3,6 +3,7 @@ valid: wikitext2
 tokenizer_name_or_path: gpt2
 cache_dir: ${scratch_dir}/wikitext2
 wrap: True
+chunking: none
 streaming: False
 insert_train_eos: True
 insert_valid_eos: True

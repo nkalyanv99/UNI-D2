@@ -27,8 +27,8 @@ torch._C._jit_set_profiling_executor(False)
 torch._C._jit_override_can_fuse_on_cpu(True)
 torch._C._jit_override_can_fuse_on_gpu(True)
 
-# Compile flex_attention for performance
-flex_attention = torch.compile(flex_attention, mode="max-autotune")
+# Compile flex_attention for performance (dynamic=True for variable batch sizes)
+flex_attention = torch.compile(flex_attention, dynamic=True)
 
 
 #################################################################################

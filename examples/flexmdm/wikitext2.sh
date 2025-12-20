@@ -7,30 +7,36 @@ cd "${REPO_ROOT}"
 export PYTHONPATH=src
 
 python -u -m discrete_diffusion \
+  scratch_dir=/fast/project/HFMI_SynergyUnit/kalyan.nadimpalli/.cache/discrete_diffusion \
   algo=flexmdm-anyorder \
-  data=openwebtext \
+  algo.only_embed_insert=false \
+  data=wikitext2 \
   data.wrap=false \
   data.chunking=double_newline \
-  data.insert_train_special=false data.insert_valid_special=false \
   data.insert_train_eos=false data.insert_valid_eos=false \
-  data.train_min_length=0 data.valid_min_length=0 \
   model=flexmdm_anyorder \
+  model.length=512 \
+  model.hidden_size=256 \
+  model.n_heads=4 \
+  model.n_blocks=4 \
+  model.cond_dim=64 \
+  model.dropout=0.1 \
   lr_scheduler=cosine_decay_warmup \
   noise=linear \
-  trainer.num_nodes=8 trainer.devices=4 \
-  trainer.max_steps=1000000 \
+  trainer.num_nodes=1 trainer.devices=8 \
+  trainer.max_steps=100000 \
   trainer.accumulate_grad_batches=1 \
-  loader.global_batch_size=1024 \
-  loader.batch_size=32 \
-  loader.eval_batch_size=32 \
-  trainer.log_every_n_steps=100 \
-  trainer.val_check_interval=10_000 \
-  trainer.limit_val_batches=0 \
-  callbacks.checkpoint_every_n_steps.every_n_train_steps=10_000 \
+  trainer.gradient_clip_val=1.0 \
+  loader.global_batch_size=512 \
+  loader.batch_size=64 \
+  loader.eval_batch_size=64 \
+  trainer.log_every_n_steps=10 \
+  trainer.val_check_interval=null \
+  trainer.check_val_every_n_epoch=10 \
+  callbacks.checkpoint_every_n_steps.every_n_train_steps=10000 \
+  callbacks.checkpoint_monitor.monitor=val_loss \
   trainer.precision=32 \
   training.torch_compile=true \
-  model.length=1024 \
-  model.dropout=0.05 \
   optim.lr=3e-4 \
   optim.weight_decay=0.03 \
   optim.beta1=0.9 \
@@ -42,5 +48,4 @@ python -u -m discrete_diffusion \
   seed=42 \
   training.ema=0.9999 \
   wandb.project=UNI-D2 \
-  wandb.name='flexmdm-anyorder-owt'
-
+  wandb.name='flexmdm-anyorder-wikitext2-ours'

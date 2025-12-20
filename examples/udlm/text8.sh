@@ -36,6 +36,6 @@ python -u -m discrete_diffusion \
     sampling.steps=256 \
     sampling.predictor=ddpm_cache \
     checkpointing.resume_from_ckpt=false \
-    wandb.project="final_run" \
+    wandb.project="UNI-D2" \
     wandb.name="udlm_text8" \
     hydra.run.dir=./outputs/text8/udlm

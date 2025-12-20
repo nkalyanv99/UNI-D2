@@ -30,6 +30,6 @@ python -u -m discrete_diffusion \
     callbacks.checkpoint_every_n_steps.every_n_train_steps=5000 \
     callbacks.sample_saver.enabled=true \
     checkpointing.resume_from_ckpt=false \
-    wandb.project="discrete_diffusion" \
+    wandb.project="UNI-D2" \
     wandb.name="candi_owt" \
     hydra.run.dir=./outputs/owt/candi

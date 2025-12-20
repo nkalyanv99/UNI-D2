@@ -23,6 +23,6 @@ python -u -m discrete_diffusion \
     callbacks.checkpoint_every_n_steps.save_last=true \
     callbacks.checkpoint_monitor.save_top_k=1 \
     checkpointing.resume_from_ckpt=false \
-    wandb.project="final_run" \
+    wandb.project="UNI-D2" \
     wandb.name="sedd_owt" \
     hydra.run.dir=./outputs/owt/sedd

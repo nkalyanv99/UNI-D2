@@ -33,4 +33,4 @@ python -m src.discrete_diffusion \
   optim.eps=1e-9 \
   lr_scheduler.warmup_t=10000 \
   wandb.name='small-gidd-owt-512' \
-  wandb.project=final_run
+  wandb.project=UNI-D2

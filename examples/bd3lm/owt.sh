@@ -31,7 +31,7 @@ python -u -m discrete_diffusion \
     data.insert_valid_special=True \
     model.length=1024 \
     block_size=${BLOCK_SIZE} \
-    wandb.project="final_run" \
+    wandb.project="UNI-D2" \
     wandb.name=bd3lm_owt \
     model.attn_backend=flex \
     training.resample=True \

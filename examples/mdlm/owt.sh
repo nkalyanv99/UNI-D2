@@ -27,6 +27,6 @@ python -u -m discrete_diffusion \
     callbacks.sample_saver.num_samples=5 \
     callbacks.sample_saver.save_dir=./outputs/owt/mdlm/samples \
     checkpointing.resume_from_ckpt=false \
-    wandb.project="final_run" \
+    wandb.project="UNI-D2" \
     wandb.name="mdlm_owt" \
     hydra.run.dir=./outputs/owt/mdlm
