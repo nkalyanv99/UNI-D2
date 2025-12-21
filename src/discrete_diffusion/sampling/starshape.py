@@ -3,9 +3,15 @@
 StarShape uses a hyperparameter t_on to control a transition between two phases:
   - Phase 1 (t > t_on): Standard MDLM denoising (irreversible, masks only masked tokens)
   - Phase 2 (t <= t_on): Random masking from sampled x0 (can re-mask any token)
+
+Two remasking modes are supported:
+  - "default": Mask ratio decreases following MDLM schedule
+  - "plato": Mask ratio stays fixed at the level at t_on (plateau)
 """
 
 from __future__ import annotations
+
+from typing import Literal
 
 import torch
 
@@ -25,19 +31,40 @@ class StarShapeSampler(AbsorbingSampler):
     forward_process: Optional forward diffusion process (unused in sampling).
     t_on: Transition point for phase change. Default 0.1 means transition 
           happens at 10% through the diffusion process.
+    remasker_schedule: Controls mask ratio behavior after t_on.
+          "default": Mask ratio continues decreasing following MDLM schedule.
+          "plato": Mask ratio stays fixed at alpha(t_on) level.
   """
 
-  def __init__(self, config, forward_process=None, t_on=0.1):
+  def __init__(self, config, forward_process=None, t_on=0.1, 
+               remasker_schedule: Literal["default", "plato"] = "default"):
     super().__init__(config, forward_process)
     self.t_on = t_on
+    self.remasker_schedule = remasker_schedule
 
-  def _mask_tokens_starshape(self, model, x, sampled_x0, alpha_s, noise_removal_step):
-    """Apply StarShape masking: random masking from sampled x0.
+  def _get_mistake_confidences(self, model, sampled_x0, t):
+    """Return confidence scores indicating likelihood each token is a mistake.
+    
+    Higher values indicate higher confidence that the token should be remasked.
+    This base implementation returns random values for random remasking.
+    
+    Args:
+      model: The diffusion model.
+      sampled_x0: Sampled x0 from model [batch, seq_len].
+      t: Current timestep [batch, 1].
+      
+    Returns:
+      Tensor: Confidence scores [batch, seq_len]. Higher = more likely mistake.
+    """
+    return torch.randn(sampled_x0.shape, device=sampled_x0.device)
+
+  def _mask_tokens_starshape(self, model, x, sampled_x0, alpha_s, t, noise_removal_step):
+    """Apply StarShape masking: guided masking from sampled x0.
     
     This implements the StarShape Phase 2 strategy:
     - Start with fully denoised sampled_x0
-    - Randomly select floor(num_tokens * (1 - alpha_s)) positions to mask
-    - Keep remaining ceil(num_tokens * alpha_s) positions as sampled_x0 values
+    - Select floor(num_tokens * (1 - alpha)) positions with highest mistake confidence
+    - Keep remaining positions as sampled_x0 values
     - Special case: if noise_removal_step=True, mask 0 tokens (return full x0)
     
     Args:
@@ -45,6 +72,7 @@ class StarShapeSampler(AbsorbingSampler):
       x: Current sequence [batch, length] (not used in StarShape masking).
       sampled_x0: Sampled x0 from model [batch, length].
       alpha_s: Noise level at time s = t - dt [batch, 1].
+      t: Current timestep [batch, 1].
       noise_removal_step: If True, return sampled_x0 with 0 masks.
       
     Returns:
@@ -56,24 +84,30 @@ class StarShapeSampler(AbsorbingSampler):
     
     batch_size, seq_length = sampled_x0.shape
     
-    # Calculate number of tokens to mask: floor(seq_length * (1 - alpha_s))
-    # All batch elements have same alpha_s (same t), so take first element
-    # One .item() call per step is acceptable (not in a loop over batch)
-    num_tokens_to_mask = int(torch.floor(seq_length * (1 - alpha_s[0, 0])).item())
+    # Calculate number of tokens to mask based on remasking mode
+    if self.remasker_schedule == "plato":
+      # Use alpha(t_on) for fixed mask ratio
+      alpha_for_mask = model.noise.alpha_t(
+        torch.tensor([[self.t_on]], device=t.device, dtype=t.dtype)
+      )
+      num_tokens_to_mask = int(torch.floor(seq_length * (1 - alpha_for_mask[0, 0])).item())
+    else:
+      # Default: use alpha_s (continuing MDLM schedule)
+      num_tokens_to_mask = int(torch.floor(seq_length * (1 - alpha_s[0, 0])).item())
     
     if num_tokens_to_mask == 0:
       return sampled_x0
     
-    # Generate random values for each position
-    random_values = torch.randn(batch_size, seq_length, device=sampled_x0.device)
+    # Get mistake confidences for each position
+    confidences = self._get_mistake_confidences(model, sampled_x0, t)
     
-    # Get indices of top-k positions with highest random values (these will be masked)
-    _, mask_positions = torch.topk(random_values, k=num_tokens_to_mask, dim=1)  # [batch_size, num_tokens_to_mask]
+    # Get indices of top-k positions with highest confidence (these will be masked)
+    _, mask_positions = torch.topk(confidences, k=num_tokens_to_mask, dim=1)
     
     # Create batch indices for advanced indexing
     batch_indices = torch.arange(batch_size, device=sampled_x0.device).unsqueeze(1).expand_as(mask_positions)
     
-    # Apply masking using advanced indexing (creates new tensor, no explicit clone needed)
+    # Apply masking using advanced indexing
     sampled_x0[batch_indices, mask_positions] = model.mask_id
     return sampled_x0
 
@@ -83,7 +117,7 @@ class StarShapeSampler(AbsorbingSampler):
     
     Implements two-phase masking:
       - If t > t_on: Use MDLM masking (Phase 1)
-      - If t <= t_on: Use StarShape random masking (Phase 2)
+      - If t <= t_on: Use StarShape guided masking (Phase 2)
     
     Args:
       model: The diffusion model.
@@ -114,8 +148,7 @@ class StarShapeSampler(AbsorbingSampler):
       # Phase 1: Use MDLM masking (irreversible denoising)
       out = self._mask_tokens_mdlm(model, x, sampled_x0, alpha_t, alpha_s)
     else:
-      # Phase 2: Use StarShape random masking
-      out = self._mask_tokens_starshape(model, x, sampled_x0, alpha_s, noise_removal_step)
+      # Phase 2: Use StarShape guided masking
+      out = self._mask_tokens_starshape(model, x, sampled_x0, alpha_s, t, noise_removal_step)
     
     return p_x0, out
-

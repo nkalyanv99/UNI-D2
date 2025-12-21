@@ -285,3 +285,56 @@ All tests passing ✅
 - `src/discrete_diffusion/train.py` - Added `strict_load` support
 - `src/discrete_diffusion/evaluations/__init__.py` - Exported `GStarMetrics`
 
+---
+
+## GStarSampler Implementation
+
+### 1. Overview
+
+GStarSampler extends StarShapeSampler to use the trained remasker model for guided token selection during Phase 2. Instead of randomly selecting which tokens to remask, GStarSampler uses the remasker's predictions to identify likely mistakes and preferentially remasks those tokens.
+
+### 2. StarShape Enhancements
+
+Extended `src/discrete_diffusion/sampling/starshape.py`:
+- Added `remasker_schedule` parameter: `"default"` (MDLM schedule) or `"plato"` (fixed mask ratio at `alpha(t_on)`)
+- Extracted `_get_mistake_confidences()` method for subclass override
+
+### 3. GStarSampler
+
+**File**: `src/discrete_diffusion/sampling/gstar.py`
+
+Inherits from StarShapeSampler, overrides `_get_mistake_confidences()`:
+- Calls `model._remasker_forward(sampled_x0, sigma)` to get remasker predictions
+- Returns softmax class 1 (mistake) probability as confidence scores
+- Tokens with highest confidence are remasked
+
+### 4. Usage
+
+```bash
+# Training with GStarSampler
+python -m discrete_diffusion \
+    algo=gstar \
+    sampling=gstar \
+    training.finetune_path="$MDLM_CHECKPOINT"
+
+# Sample generation
+python -m discrete_diffusion.evaluations.generate_samples \
+    checkpoint_path=gstar_checkpoint.ckpt \
+    sampling=gstar
+```
+
+### Files Modified/Created
+
+**Created:**
+- `src/discrete_diffusion/sampling/gstar.py` - GStarSampler class
+- `configs/sampling/gstar.yaml` - Config (inherits from starshape)
+- `tests/test_sampling/test_gstar_sampler.py` - Unit tests
+
+**Modified:**
+- `src/discrete_diffusion/sampling/starshape.py` - Added `remasker_schedule` and `_get_mistake_confidences()`
+- `src/discrete_diffusion/sampling/__init__.py` - Exported GStarSampler
+- `configs/sampling/starshape.yaml` - Added `remasker_schedule` parameter
+- `tests/test_sampling/test_starshape.py` - Added plato mode tests
+- `tests/test_integration/test_gstar_training.sh` - Added sample generation step
+- `examples/gstar/owt.sh` - Added `sampling=gstar`
+

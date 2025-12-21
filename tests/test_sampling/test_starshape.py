@@ -168,6 +168,88 @@ def test_starshape_t_on_boundary(mock_config, mock_model):
             f"Expected {expected_num_masked[i, 0].item()} masked tokens, got {actual_num_masked}"
 
 
+def test_starshape_plato_mode_fixed_mask_ratio(mock_config, mock_model):
+    """Plato mode should maintain fixed mask ratio at alpha(t_on)."""
+    t_on = 0.3
+    sampler = StarShapeSampler(mock_config, t_on=t_on, remasker_schedule="plato")
+    
+    batch_size = 2
+    seq_length = 32
+    x = torch.randint(1, mock_model.vocab_size, (batch_size, seq_length), dtype=torch.long)
+    
+    # Expected masks based on alpha(t_on) = t_on = 0.3 (linear schedule)
+    # num_tokens_to_mask = floor(32 * (1 - 0.3)) = floor(32 * 0.7) = 22
+    alpha_t_on = mock_model.noise.alpha_t(torch.tensor([[t_on]]))
+    expected_num_masked = int(torch.floor(seq_length * (1 - alpha_t_on[0, 0])).item())
+    
+    # Test at multiple timesteps < t_on - all should have same mask count
+    for t_val in [0.2, 0.1, 0.05]:
+        t = torch.tensor([[t_val], [t_val]], dtype=torch.float32)
+        dt = 0.05
+        
+        torch.manual_seed(42)
+        p_x0, out = sampler.compute_posterior(
+            mock_model, x.clone(), t, dt, p_x0=None, noise_removal_step=False
+        )
+        
+        for i in range(batch_size):
+            actual_num_masked = (out[i] == mock_model.mask_id).sum().item()
+            assert actual_num_masked == expected_num_masked, \
+                f"At t={t_val}: expected {expected_num_masked} masked, got {actual_num_masked}"
+
+
+def test_starshape_default_mode_decreasing_mask_ratio(mock_config, mock_model):
+    """Default mode should have decreasing mask count as t increases toward 1."""
+    t_on = 0.3
+    sampler = StarShapeSampler(mock_config, t_on=t_on, remasker_schedule="default")
+    
+    batch_size = 2
+    seq_length = 32
+    x = torch.randint(1, mock_model.vocab_size, (batch_size, seq_length), dtype=torch.long)
+    
+    mask_counts = []
+    # Test with increasing t values (still < t_on for Phase 2)
+    for t_val in [0.05, 0.15, 0.25]:
+        t = torch.tensor([[t_val], [t_val]], dtype=torch.float32)
+        dt = 0.05
+        
+        torch.manual_seed(42)
+        p_x0, out = sampler.compute_posterior(
+            mock_model, x.clone(), t, dt, p_x0=None, noise_removal_step=False
+        )
+        
+        mask_counts.append((out[0] == mock_model.mask_id).sum().item())
+    
+    # As t increases, alpha_s = t - dt increases, so (1 - alpha_s) decreases
+    # Therefore mask count should decrease as t increases
+    assert mask_counts[0] > mask_counts[1] > mask_counts[2], \
+        f"Expected decreasing mask counts as t increases, got {mask_counts}"
+
+
+def test_starshape_get_mistake_confidences_shape(mock_config, mock_model):
+    """_get_mistake_confidences should return correct shape."""
+    sampler = StarShapeSampler(mock_config, t_on=0.1)
+    
+    batch_size = 4
+    seq_length = 32
+    sampled_x0 = torch.randint(1, mock_model.vocab_size, (batch_size, seq_length))
+    t = torch.tensor([[0.05]] * batch_size, dtype=torch.float32)
+    
+    confidences = sampler._get_mistake_confidences(mock_model, sampled_x0, t)
+    
+    assert confidences.shape == (batch_size, seq_length), \
+        f"Expected shape {(batch_size, seq_length)}, got {confidences.shape}"
+
+
+def test_starshape_remasker_schedule_initialization(mock_config):
+    """Test that remasker_schedule is properly initialized."""
+    sampler_default = StarShapeSampler(mock_config, t_on=0.1)
+    assert sampler_default.remasker_schedule == "default"
+    
+    sampler_plato = StarShapeSampler(mock_config, t_on=0.1, remasker_schedule="plato")
+    assert sampler_plato.remasker_schedule == "plato"
+
+
 if __name__ == "__main__":
     # Run tests with pytest
     pytest.main([__file__, "-v"])

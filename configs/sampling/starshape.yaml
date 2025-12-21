@@ -6,3 +6,4 @@ steps: ${model.length}  # Use model's sequence length instead of fixed 5000
 sampler:
   _target_: discrete_diffusion.sampling.starshape.StarShapeSampler
   t_on: 0.1  # Transition point for StarShape behavior (10% of diffusion process)
+  remasker_schedule: default  # "default" follows MDLM schedule, "plato" keeps fixed mask ratio

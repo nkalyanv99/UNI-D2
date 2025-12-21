@@ -23,6 +23,7 @@ python -u -m discrete_diffusion \
     model=small \
     model.length=128 \
     algo=gstar \
+    sampling=gstar \
     training.finetune_path="$MDLM_CHECKPOINT" \
     ++training.strict_load=False \
     training.torch_compile=false \
