@@ -103,6 +103,20 @@ Our goal is to maintain this repository as the unified starting point for future
 ## Acknowledgements
 We are grateful to the authors of the respective papers for open-sourcing their codebases, which served as a foundation for this library.
 
+## Citation
+
+If you use UNI-D² in your research, please cite it using the following BibTeX entry:
+
+```bibtex
+@software{nadimpalli2025unid2,
+  author = {Nadimpalli, Kalyan Varma and Pauline, Vincent and Kapl, Ferdinand and Karimi-Mamaghan, Amir Mohammad and Tong, Alexander and Dittadi, Andrea and Bauer, Stefan},
+  title = {{UNI-D²: A Unified Codebase for Discrete Diffusion Language Models}},
+  version = {0.1.0},
+  url = {https://github.com/nkalyanv99/UNI-D2},
+  year = {2025}
+}
+```
+
 ## License
 
 ```
