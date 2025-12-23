@@ -7,6 +7,7 @@ samples_path: samples.pt  # Output path for generated samples (.pt)
 num_samples: 16           # Total number of samples to generate
 batch_size: 16            # Batch size for generation
 num_steps: null           # Number of denoising steps (null = use config value)
-device: cuda              # Device to run generation on
+device: cuda              # Device type: 'cuda' or 'cpu'
+devices: null             # Number of GPUs to use (null = 1 by default)
 torch_compile: false      # Whether to use torch.compile
 save_text: false          # Whether to save detokenized text samples
