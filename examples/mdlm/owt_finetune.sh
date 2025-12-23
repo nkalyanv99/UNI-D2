@@ -52,7 +52,7 @@ python -u -m discrete_diffusion \
     callbacks.sample_saver.num_samples=5 \
     callbacks.sample_saver.save_dir=./outputs/owt/mdlm_finetune_len${MAX_LENGTH}/samples \
     checkpointing.resume_from_ckpt=false \
-    wandb.project="gstar_v2" \
+    wandb.project="gstar" \
     wandb.name="mdlm_owt_finetune_len${MAX_LENGTH}" \
     hydra.run.dir=./outputs/owt/mdlm_finetune_len${MAX_LENGTH}
 
