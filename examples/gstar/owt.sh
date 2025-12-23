@@ -7,7 +7,7 @@ cd "${REPO_ROOT}"
 export PYTHONPATH=src
 
 # Pretrained MDLM checkpoint to load as frozen backbone
-MDLM_CHECKPOINT="${REPO_ROOT}/outputs/owt/mdlm_finetune_len128/checkpoints/6-100000.ckpt"
+MDLM_CHECKPOINT="${REPO_ROOT}/outputs/mdlm_finetune_len128/checkpoints/6-100000.ckpt"
 
 if [ ! -f "$MDLM_CHECKPOINT" ]; then
     echo "Error: MDLM checkpoint not found at $MDLM_CHECKPOINT"
@@ -27,11 +27,11 @@ python -u -m discrete_diffusion \
     training.finetune_path="$MDLM_CHECKPOINT" \
     ++training.strict_load=False \
     training.torch_compile=false \
-    loader.batch_size=16 \
-    loader.eval_batch_size=16 \
-    loader.num_workers=4 \
+    loader.batch_size=64 \
+    loader.eval_batch_size=64 \
+    loader.num_workers=8 \
     trainer.num_nodes=1 \
-    trainer.devices=1 \
+    trainer.devices=8 \
     trainer.max_steps=50_000 \
     trainer.val_check_interval=1000 \
     trainer.log_every_n_steps=100 \
