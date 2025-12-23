@@ -59,3 +59,4 @@ tmp*/
 *.hdf5
 
 checkpoints/
+samples/
