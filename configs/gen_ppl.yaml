@@ -1,10 +1,12 @@
 samples_path: ???  # Required: path to samples (.pt, .npz, .json)
 model_tokenizer: gpt2  # Tokenizer used by diffusion model to generate samples
-pretrained_model: gpt2  # Eval LM gpt2 or google/gemma-2-9b
-batch_size: 4
-max_length: 512
+pretrained_model: gpt2-large  # Eval LM gpt2 or google/gemma-2-9b
+batch_size: 64
+max_length: ???
 retokenize: true       # Re-tokenize with eval model's tokenizer
 first_chunk_only: true # Evaluate only up to first EOS
-metrics_path: gen_ppl_metrics.json
+metrics_path: null     # By default, generated from samples_path
+device: cuda           # Device type: 'cuda' or 'cpu'
+devices: null          # Number of GPUs to use (null = 1 by default)
 torch_compile: false
 

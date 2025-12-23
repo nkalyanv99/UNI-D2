@@ -1,0 +1,1 @@
+{"file": "mdlm_len_256", "pretrained_model": "gpt2-large", "median_nll": 2.5832678079605103, "avg_nll": 3.276195410925197, "ppl": 26.474854902511424, "acc": 0.3604503937007874, "tokens": 635000, "retokenize": true, "first_chunk_only": true, "num_samples": 5000, "num_devices": 8}
