@@ -21,11 +21,11 @@ class GStarSampler(StarShapeSampler):
   Args:
     config: Hydra config object containing sampling parameters.
     forward_process: Optional forward diffusion process (unused in sampling).
-    t_on: Transition point for phase change. Default 0.1 means transition 
-          happens at 10% through the diffusion process.
-    remasker_schedule: Controls mask ratio behavior after t_on.
+    t_on: Transition point to enable StarShape strategy. Default 0.55.
+    t_off: Transition point to disable StarShape strategy. Default 0.05.
+    remasker_schedule: Controls mask ratio behavior.
           "default": Mask ratio continues decreasing following MDLM schedule.
-          "plato": Mask ratio stays fixed at alpha(t_on) level.
+          "plato": Mask ratio uses rescaled time for smooth schedule continuation.
   """
 
   def _get_mistake_confidences(self, model, sampled_x0, t):

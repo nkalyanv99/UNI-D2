@@ -7,7 +7,7 @@ cd "${REPO_ROOT}"
 export PYTHONPATH=src
 
 # Pretrained MDLM checkpoint to load as frozen backbone
-MDLM_CHECKPOINT="${REPO_ROOT}/outputs/owt/mdlm_finetune_len256/dummy_checkpoints/checkpoints/best.ckpt"
+MDLM_CHECKPOINT="${REPO_ROOT}/outputs/owt/mdlm_finetune_len${MAX_LENGTH}/dummy_checkpoints/checkpoints/best.ckpt"
 
 if [ ! -f "$MDLM_CHECKPOINT" ]; then
     echo "Error: MDLM checkpoint not found at $MDLM_CHECKPOINT"

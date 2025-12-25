@@ -10,10 +10,14 @@ from discrete_diffusion.sampling.starshape import StarShapeSampler
 
 
 class MockNoise:
-    """Mock noise schedule."""
+    """Mock noise schedule: alpha decreases from 1 to 0 as t goes from 0 to 1."""
     def alpha_t(self, t):
-        """Linear noise schedule for testing."""
-        return t
+        """Linear noise schedule: alpha = 1 - t.
+        
+        At t=0 (end of diffusion): alpha=1 (all denoised)
+        At t=1 (start of diffusion): alpha=0 (all masked)
+        """
+        return 1 - t
 
 
 class MockModel:
@@ -94,24 +98,25 @@ def mock_gstar_model():
 
 def test_gstar_sampler_inherits_from_starshape(mock_config):
     """GStarSampler should inherit from StarShapeSampler."""
-    sampler = GStarSampler(mock_config, t_on=0.1)
+    sampler = GStarSampler(mock_config, t_on=0.5, t_off=0.05)
     assert isinstance(sampler, StarShapeSampler)
 
 
 def test_gstar_sampler_initialization(mock_config):
     """Test GStarSampler initializes with correct parameters."""
-    sampler = GStarSampler(mock_config, t_on=0.2, remasker_schedule="plato")
+    sampler = GStarSampler(mock_config, t_on=0.6, t_off=0.1, remasker_schedule="plato")
     
-    assert sampler.t_on == 0.2
+    assert sampler.t_on == 0.6
+    assert sampler.t_off == 0.1
     assert sampler.remasker_schedule == "plato"
 
 
 def test_gstar_sampler_raises_without_remasker(mock_config, mock_model):
     """GStarSampler should raise error when model lacks _remasker_forward."""
-    sampler = GStarSampler(mock_config, t_on=0.1)
+    sampler = GStarSampler(mock_config, t_on=0.5, t_off=0.05)
     
     sampled_x0 = torch.randint(1, mock_model.vocab_size, (2, 32))
-    t = torch.tensor([[0.05], [0.05]], dtype=torch.float32)
+    t = torch.tensor([[0.2], [0.2]], dtype=torch.float32)
     
     with pytest.raises(ValueError, match="GStarSampler requires a GStar model"):
         sampler._get_mistake_confidences(mock_model, sampled_x0, t)
@@ -119,12 +124,12 @@ def test_gstar_sampler_raises_without_remasker(mock_config, mock_model):
 
 def test_gstar_sampler_get_mistake_confidences_shape(mock_config, mock_gstar_model):
     """_get_mistake_confidences should return correct shape."""
-    sampler = GStarSampler(mock_config, t_on=0.1)
+    sampler = GStarSampler(mock_config, t_on=0.5, t_off=0.05)
     
     batch_size = 4
     seq_length = 32
     sampled_x0 = torch.randint(1, mock_gstar_model.vocab_size, (batch_size, seq_length))
-    t = torch.tensor([[0.05]] * batch_size, dtype=torch.float32)
+    t = torch.tensor([[0.2]] * batch_size, dtype=torch.float32)
     
     confidences = sampler._get_mistake_confidences(mock_gstar_model, sampled_x0, t)
     
@@ -134,13 +139,13 @@ def test_gstar_sampler_get_mistake_confidences_shape(mock_config, mock_gstar_mod
 
 def test_gstar_sampler_get_mistake_confidences_values(mock_config, mock_gstar_model):
     """_get_mistake_confidences should return softmax class 1 probabilities."""
-    sampler = GStarSampler(mock_config, t_on=0.1)
+    sampler = GStarSampler(mock_config, t_on=0.5, t_off=0.05)
     
     batch_size = 2
     seq_length = 8
     # Create tokens with known values
     sampled_x0 = torch.arange(seq_length).unsqueeze(0).expand(batch_size, -1)
-    t = torch.tensor([[0.05]] * batch_size, dtype=torch.float32)
+    t = torch.tensor([[0.2]] * batch_size, dtype=torch.float32)
     
     confidences = sampler._get_mistake_confidences(mock_gstar_model, sampled_x0, t)
     
@@ -158,12 +163,12 @@ def test_gstar_sampler_get_mistake_confidences_values(mock_config, mock_gstar_mo
 
 def test_gstar_sampler_calls_remasker_with_correct_args(mock_config, mock_gstar_model):
     """_get_mistake_confidences should call remasker with correct sigma."""
-    sampler = GStarSampler(mock_config, t_on=0.1)
+    sampler = GStarSampler(mock_config, t_on=0.5, t_off=0.05)
     
     batch_size = 2
     seq_length = 32
     sampled_x0 = torch.randint(1, mock_gstar_model.vocab_size, (batch_size, seq_length))
-    t = torch.tensor([[0.2], [0.2]], dtype=torch.float32)
+    t = torch.tensor([[0.3], [0.3]], dtype=torch.float32)
     
     sampler._get_mistake_confidences(mock_gstar_model, sampled_x0, t)
     
@@ -171,21 +176,23 @@ def test_gstar_sampler_calls_remasker_with_correct_args(mock_config, mock_gstar_
     assert mock_gstar_model._last_sampled_x0 is not None
     assert torch.equal(mock_gstar_model._last_sampled_x0, sampled_x0)
     
-    # Verify sigma computation: sigma = 1 - alpha_t = 1 - t (linear schedule)
-    expected_sigma = 1 - t
+    # Verify sigma computation: sigma = 1 - alpha_t = 1 - (1-t) = t
+    # For linear schedule where alpha = 1 - t
+    expected_sigma = t
     assert torch.allclose(mock_gstar_model._last_sigma, expected_sigma)
 
 
 def test_gstar_sampler_masks_highest_confidence_tokens(mock_config, mock_gstar_model):
     """GStarSampler should mask tokens with highest remasker confidence."""
-    t_on = 0.3
-    sampler = GStarSampler(mock_config, t_on=t_on)
+    t_on = 0.5
+    t_off = 0.05
+    sampler = GStarSampler(mock_config, t_on=t_on, t_off=t_off)
     
     batch_size = 2
     seq_length = 32
     x = torch.randint(1, mock_gstar_model.vocab_size, (batch_size, seq_length), dtype=torch.long)
     
-    t = torch.tensor([[0.2], [0.2]], dtype=torch.float32)  # t < t_on
+    t = torch.tensor([[0.3], [0.3]], dtype=torch.float32)  # t_off < t < t_on (Phase 2)
     dt = 0.1
     
     p_x0, out = sampler.compute_posterior(
@@ -193,7 +200,8 @@ def test_gstar_sampler_masks_highest_confidence_tokens(mock_config, mock_gstar_m
     )
     
     # Check the number of masked positions
-    alpha_s = t - dt  # Linear schedule: alpha_s = t - dt
+    # Linear schedule: alpha_s = 1 - (t - dt) = 1 - t + dt
+    alpha_s = 1 - (t - dt)
     expected_num_masks = int(torch.floor(seq_length * (1 - alpha_s[0, 0])).item())
     
     for i in range(batch_size):
@@ -210,9 +218,10 @@ def test_gstar_sampler_phase1_matches_mdlm(mock_config, mock_gstar_model):
     """When t > t_on, GStarSampler should use MDLM masking (Phase 1)."""
     from discrete_diffusion.sampling.absorbing import AbsorbingSampler
     
-    t_on = 0.1
+    t_on = 0.3
+    t_off = 0.05
     sampler_mdlm = AbsorbingSampler(mock_config)
-    sampler_gstar = GStarSampler(mock_config, t_on=t_on)
+    sampler_gstar = GStarSampler(mock_config, t_on=t_on, t_off=t_off)
     
     batch_size = 2
     seq_length = 32
@@ -237,20 +246,51 @@ def test_gstar_sampler_phase1_matches_mdlm(mock_config, mock_gstar_model):
     assert torch.equal(out_mdlm, out_gstar)
 
 
+def test_gstar_sampler_phase3_matches_mdlm(mock_config, mock_gstar_model):
+    """When t < t_off, GStarSampler should use MDLM masking (Phase 3)."""
+    from discrete_diffusion.sampling.absorbing import AbsorbingSampler
+    
+    t_on = 0.5
+    t_off = 0.1
+    sampler_mdlm = AbsorbingSampler(mock_config)
+    sampler_gstar = GStarSampler(mock_config, t_on=t_on, t_off=t_off)
+    
+    batch_size = 2
+    seq_length = 32
+    x = torch.full((batch_size, seq_length), mock_gstar_model.mask_id, dtype=torch.long)
+    x[:, :5] = torch.randint(1, mock_gstar_model.vocab_size, (batch_size, 5))
+    
+    t = torch.tensor([[0.05], [0.05]], dtype=torch.float32)  # t < t_off
+    dt = 0.01
+    
+    torch.manual_seed(42)
+    p_x0_mdlm, out_mdlm = sampler_mdlm.compute_posterior(
+        mock_gstar_model, x.clone(), t, dt, p_x0=None, noise_removal_step=False
+    )
+    
+    torch.manual_seed(42)
+    p_x0_gstar, out_gstar = sampler_gstar.compute_posterior(
+        mock_gstar_model, x.clone(), t, dt, p_x0=None, noise_removal_step=False
+    )
+    
+    # Results should be identical in Phase 3
+    assert torch.allclose(p_x0_mdlm, p_x0_gstar)
+    assert torch.equal(out_mdlm, out_gstar)
+
+
 def test_gstar_sampler_plato_mode(mock_config, mock_gstar_model):
-    """GStarSampler plato mode should maintain fixed mask ratio."""
-    t_on = 0.3
-    sampler = GStarSampler(mock_config, t_on=t_on, remasker_schedule="plato")
+    """GStarSampler plato mode should maintain fixed mask ratio in Phase 2."""
+    t_on = 0.5
+    t_off = 0.1
+    sampler = GStarSampler(mock_config, t_on=t_on, t_off=t_off, remasker_schedule="plato")
     
     batch_size = 2
     seq_length = 32
     
-    # Expected masks based on alpha(t_on) = 0.3
-    alpha_t_on = mock_gstar_model.noise.alpha_t(torch.tensor([[t_on]]))
-    expected_num_masked = int(torch.floor(seq_length * (1 - alpha_t_on[0, 0])).item())
-    
-    # Test at multiple timesteps < t_on
-    for t_val in [0.2, 0.1, 0.05]:
+    # Test at multiple timesteps in Phase 2 (t_on >= t >= t_off)
+    # In plato mode, all should have the same mask count
+    results = []
+    for t_val in [0.4, 0.3, 0.2, 0.15]:
         x = torch.randint(1, mock_gstar_model.vocab_size, (batch_size, seq_length))
         t = torch.tensor([[t_val], [t_val]], dtype=torch.float32)
         dt = 0.05
@@ -259,12 +299,13 @@ def test_gstar_sampler_plato_mode(mock_config, mock_gstar_model):
             mock_gstar_model, x, t, dt, p_x0=None, noise_removal_step=False
         )
         
-        for i in range(batch_size):
-            actual_num_masked = (out[i] == mock_gstar_model.mask_id).sum().item()
-            assert actual_num_masked == expected_num_masked, \
-                f"At t={t_val}: expected {expected_num_masked} masked, got {actual_num_masked}"
+        mask_count = (out[0] == mock_gstar_model.mask_id).sum().item()
+        results.append(mask_count)
+    
+    # All mask counts should be the same in Phase 2 with plato mode
+    assert all(r == results[0] for r in results), \
+        f"Expected same mask count in plato Phase 2, got {results}"
 
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

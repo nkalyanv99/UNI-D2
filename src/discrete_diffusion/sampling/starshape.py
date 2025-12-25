@@ -1,12 +1,13 @@
-"""StarShape sampler - extends MDLM with two-phase masking strategy.
+"""StarShape sampler - extends MDLM with three-phase masking strategy.
 
-StarShape uses a hyperparameter t_on to control a transition between two phases:
+StarShape uses hyperparameters t_on and t_off to control transitions between phases:
   - Phase 1 (t > t_on): Standard MDLM denoising (irreversible, masks only masked tokens)
-  - Phase 2 (t <= t_on): Random masking from sampled x0 (can re-mask any token)
+  - Phase 2 (t_on >= t >= t_off): Random masking from sampled x0 (can re-mask any token)
+  - Phase 3 (t < t_off): Standard MDLM denoising (irreversible)
 
 Two remasking modes are supported:
   - "default": Mask ratio decreases following MDLM schedule
-  - "plato": Mask ratio stays fixed at the level at t_on (plateau)
+  - "plato": Mask ratio uses rescaled time so removing plateau gives MDLM schedule
 """
 
 from __future__ import annotations
@@ -20,27 +21,64 @@ from .absorbing import AbsorbingSampler
 
 
 class StarShapeSampler(AbsorbingSampler):
-  """StarShape sampler with two-phase masking controlled by t_on.
+  """StarShape sampler with three-phase masking controlled by t_on and t_off.
   
-  Extends AbsorbingSampler (MDLM) with a phase transition:
+  Extends AbsorbingSampler (MDLM) with phase transitions:
     - Phase 1 (t > t_on): Use MDLM masking strategy
-    - Phase 2 (t <= t_on): Random masking from sampled x0
+    - Phase 2 (t_on >= t >= t_off): Random masking from sampled x0
+    - Phase 3 (t < t_off): Use MDLM masking strategy
   
   Args:
     config: Hydra config object containing sampling parameters.
     forward_process: Optional forward diffusion process (unused in sampling).
-    t_on: Transition point for phase change. Default 0.1 means transition 
-          happens at 10% through the diffusion process.
-    remasker_schedule: Controls mask ratio behavior after t_on.
+    t_on: Transition point to enable StarShape strategy. Default 0.55.
+    t_off: Transition point to disable StarShape strategy. Default 0.05.
+    remasker_schedule: Controls mask ratio behavior.
           "default": Mask ratio continues decreasing following MDLM schedule.
-          "plato": Mask ratio stays fixed at alpha(t_on) level.
+          "plato": Mask ratio uses rescaled time for smooth schedule continuation.
   """
 
-  def __init__(self, config, forward_process=None, t_on=0.1, 
+  def __init__(self, config, forward_process=None, t_on=0.55, t_off=0.05,
                remasker_schedule: Literal["default", "plato"] = "default"):
     super().__init__(config, forward_process)
     self.t_on = t_on
+    self.t_off = t_off
     self.remasker_schedule = remasker_schedule
+
+  def _get_rescaled_alpha(self, model, t):
+    """Get alpha value using rescaled time for plato mode.
+    
+    The rescaling ensures that if we remove the plateau between t_on and t_off,
+    the MDLM schedule continues smoothly.
+    
+    Rescaling formulas (converting to progress = 1 - t):
+      - t > t_on: progress = (1 - t) / (1 - (t_on - t_off))
+      - t_on >= t >= t_off: progress = (1 - t_on) / (1 - (t_on - t_off)) [fixed]
+      - t < t_off: progress = (1 - t_on + t_off - t) / (1 - (t_on - t_off))
+    
+    Then: t_rescaled = 1 - progress
+    
+    Args:
+      model: The diffusion model.
+      t: Current timestep [batch, 1].
+      
+    Returns:
+      Rescaled alpha value.
+    """
+    effective_range = 1 - (self.t_on - self.t_off)
+    
+    if torch.all(t > self.t_on):
+      # Phase 1: before plateau
+      progress = (1 - t) / effective_range
+    elif torch.all(t >= self.t_off):
+      # Phase 2: during plateau - use fixed value at t_on boundary
+      progress = torch.full_like(t, (1 - self.t_on) / effective_range)
+    else:
+      # Phase 3: after plateau
+      progress = (1 - self.t_on + self.t_off - t) / effective_range
+    
+    t_rescaled = 1 - progress
+    return model.noise.alpha_t(t_rescaled)
 
   def _get_mistake_confidences(self, model, sampled_x0, t):
     """Return confidence scores indicating likelihood each token is a mistake.
@@ -72,6 +110,7 @@ class StarShapeSampler(AbsorbingSampler):
       x: Current sequence [batch, length] (not used in StarShape masking).
       sampled_x0: Sampled x0 from model [batch, length].
       alpha_s: Noise level at time s = t - dt [batch, 1].
+              For plato mode, this is already rescaled in compute_posterior.
       t: Current timestep [batch, 1].
       noise_removal_step: If True, return sampled_x0 with 0 masks.
       
@@ -84,16 +123,9 @@ class StarShapeSampler(AbsorbingSampler):
     
     batch_size, seq_length = sampled_x0.shape
     
-    # Calculate number of tokens to mask based on remasking mode
-    if self.remasker_schedule == "plato":
-      # Use alpha(t_on) for fixed mask ratio
-      alpha_for_mask = model.noise.alpha_t(
-        torch.tensor([[self.t_on]], device=t.device, dtype=t.dtype)
-      )
-      num_tokens_to_mask = int(torch.floor(seq_length * (1 - alpha_for_mask[0, 0])).item())
-    else:
-      # Default: use alpha_s (continuing MDLM schedule)
-      num_tokens_to_mask = int(torch.floor(seq_length * (1 - alpha_s[0, 0])).item())
+    # Calculate number of tokens to mask
+    # For plato mode, alpha_s is already rescaled in compute_posterior
+    num_tokens_to_mask = int(torch.floor(seq_length * (1 - alpha_s[0, 0])).item())
     
     if num_tokens_to_mask == 0:
       return sampled_x0
@@ -115,9 +147,13 @@ class StarShapeSampler(AbsorbingSampler):
                         noise_removal_step=False):
     """Compute posterior for StarShape sampling.
     
-    Implements two-phase masking:
-      - If t > t_on: Use MDLM masking (Phase 1)
-      - If t <= t_on: Use StarShape guided masking (Phase 2)
+    Implements three-phase masking:
+      - Phase 1 (t > t_on): Use MDLM masking
+      - Phase 2 (t_on >= t >= t_off): Use StarShape guided masking
+      - Phase 3 (t < t_off): Use MDLM masking
+    
+    For plato mode, alpha values are rescaled so that removing the plateau
+    gives the original MDLM schedule.
     
     Args:
       model: The diffusion model.
@@ -131,24 +167,37 @@ class StarShapeSampler(AbsorbingSampler):
       p_x0: Probability distribution over x0.
       out: Next sequence after applying masking strategy.
     """
-    alpha_t = model.noise.alpha_t(t)
-    if noise_removal_step:
-      alpha_s = torch.ones_like(alpha_t)
+    if self.remasker_schedule == "plato":
+      # Use rescaled time for plato mode
+      alpha_t = self._get_rescaled_alpha(model, t)
+      if noise_removal_step:
+        alpha_s = torch.ones_like(alpha_t)
+      else:
+        alpha_s = self._get_rescaled_alpha(model, t - dt)
     else:
-      alpha_s = model.noise.alpha_t(t - dt)
+      # Default: use normal MDLM schedule
+      alpha_t = model.noise.alpha_t(t)
+      if noise_removal_step:
+        alpha_s = torch.ones_like(alpha_t)
+      else:
+        alpha_s = model.noise.alpha_t(t - dt)
+    
     assert alpha_t.ndim == 2
     
-    # Sample x0 (shared between both phases)
+    # Sample x0 (shared between all phases)
     p_x0, sampled_x0 = self._sample_x0(model, x, t, p_x0)
     
     # Determine phase based on t
-    # t is a tensor [batch, 1], compare with scalar t_on
+    # t is a tensor [batch, 1], compare with scalar thresholds
     # All batch elements share same t, so use torch.all to avoid GPU->CPU transfer
     if torch.all(t > self.t_on):
       # Phase 1: Use MDLM masking (irreversible denoising)
       out = self._mask_tokens_mdlm(model, x, sampled_x0, alpha_t, alpha_s)
-    else:
+    elif torch.all(t >= self.t_off):
       # Phase 2: Use StarShape guided masking
       out = self._mask_tokens_starshape(model, x, sampled_x0, alpha_s, t, noise_removal_step)
+    else:
+      # Phase 3: Use MDLM masking (irreversible denoising)
+      out = self._mask_tokens_mdlm(model, x, sampled_x0, alpha_t, alpha_s)
     
     return p_x0, out
