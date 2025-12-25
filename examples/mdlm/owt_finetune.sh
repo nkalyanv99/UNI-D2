@@ -24,6 +24,7 @@ fi
 
 echo "Fine-tuning from checkpoint: $CHECKPOINT_PATH"
 echo "Max sequence length: $MAX_LENGTH"
+echo "Time conditioning: $TIME_CONDITIONING"
 
 python -u -m discrete_diffusion \
     data=openwebtext-split \
@@ -32,6 +33,7 @@ python -u -m discrete_diffusion \
     model=small \
     model.length=$MAX_LENGTH \
     algo=mdlm \
+    algo.time_conditioning=$TIME_CONDITIONING \
     training.finetune_path="$CHECKPOINT_PATH" \
     training.torch_compile=false \
     loader.batch_size=16 \
@@ -53,6 +55,6 @@ python -u -m discrete_diffusion \
     callbacks.sample_saver.save_dir=./outputs/owt/mdlm_finetune_len${MAX_LENGTH}/samples \
     checkpointing.resume_from_ckpt=false \
     wandb.project="gstar" \
-    wandb.name="mdlm_owt_finetune_len${MAX_LENGTH}" \
-    hydra.run.dir=./outputs/owt/mdlm_finetune_len${MAX_LENGTH}
+    wandb.name="mdlm_owt_finetune_len${MAX_LENGTH}_time_conditioning_${TIME_CONDITIONING}" \
+    hydra.run.dir=./outputs/owt/mdlm_finetune_len${MAX_LENGTH}_time_conditioning_${TIME_CONDITIONING}
 

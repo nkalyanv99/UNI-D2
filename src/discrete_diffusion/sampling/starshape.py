@@ -65,7 +65,7 @@ class StarShapeSampler(AbsorbingSampler):
     Returns:
       Rescaled alpha value.
     """
-    effective_range = 1 - (self.t_on - self.t_off)
+    effective_range = max(1 - (self.t_on - self.t_off), 1e-6)
     
     if torch.all(t > self.t_on):
       # Phase 1: before plateau
