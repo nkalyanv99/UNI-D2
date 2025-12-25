@@ -10,4 +10,4 @@ sampling:
     t_off: 0.05
     remasker_schedule: default
 
-samples_path: ${base_samples_path}/starshape_t_on_${sampling.sampler.t_on}_t_off_${sampling.sampler.t_off}_remasker_schedule_${sampling.sampler.remasker_schedule}_len_${max_length}.pt
+samples_path: ${base_samples_path}/starshape_t_on_${sampling.sampler.t_on}_t_off_${sampling.sampler.t_off}_remasker_schedule_${sampling.sampler.remasker_schedule}_len_${max_length}_steps_${num_steps}.pt
