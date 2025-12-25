@@ -1,0 +1,1 @@
+{"file": "gstar_t_on_0.55_t_off_0.05_remasker_schedule_plato_len_128", "pretrained_model": "gpt2-large", "median_nll": 2.003164768218994, "avg_nll": 2.8087041901554937, "ppl": 16.58840886227005, "acc": 0.43344128283731015, "tokens": 624366, "retokenize": true, "first_chunk_only": true, "num_samples": 5000, "num_devices": 8, "diversity_n": 4, "distinct_n": 0.32}
