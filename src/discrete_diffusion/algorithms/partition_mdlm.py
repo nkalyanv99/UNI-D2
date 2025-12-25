@@ -33,7 +33,6 @@ class PartitionMDLM(MDLM):
     if self.post_process_fp64:
       model_output = model_output.to(torch.float64)
     model_output[:, :, self.mask_id] = self.neg_infinity
-    model_output = torch.log_softmax(model_output, dim=-1)
     return model_output
 
   def forward(self, xt, sigma, group_idxs=None, 
@@ -69,12 +68,14 @@ class PartitionMDLM(MDLM):
     alpha_t = self.noise.alpha_t(t)
     dalpha_t = self.noise.alpha_prime_t(t)
     alpha_t = alpha_t.unsqueeze(-1)
+    dalpha_t = dalpha_t.unsqueeze(-1)
     assert alpha_t.ndim == 2
     sigma = self._sigma_from_alphat(alpha_t)
 
     alpha_t_complement = self.noise.alpha_t(t_complement)
     dalpha_t_complement = self.noise.alpha_prime_t(t_complement)
     alpha_t_complement = alpha_t_complement.unsqueeze(-1)
+    dalpha_t_complement = dalpha_t_complement.unsqueeze(-1)
     assert alpha_t_complement.ndim == 2
 
     group_idxs = self._q_xt_partition(x0, alpha_t)

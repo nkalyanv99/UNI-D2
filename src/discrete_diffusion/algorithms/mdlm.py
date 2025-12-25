@@ -1,8 +1,10 @@
 """MDLM algorithm implementation extracted from :mod:`algorithms.algo`."""
 
 import torch
+import torch.nn.functional as F
 
 from . import base as trainer_base
+from ..utils.utils import liger_cross_entropy
 
 
 class MDLM(trainer_base.AbsorbingState):
@@ -16,41 +18,20 @@ class MDLM(trainer_base.AbsorbingState):
     super()._validate_configuration()
 
   def _process_model_output(self, model_output, xt, sigma):
-    """Post-process model logits to enforce absorbing state constraints.
-    
-    Sets probability of mask token to 0 (logit -inf).
-    For unmasked positions in xt, sets probability of that token to 1 (logit 0)
-    and others to 0 (logit -inf).
-    """
-    # Set mask token logits to -inf (can't predict mask token)
     index = torch.full((xt.shape[0], xt.shape[1], 1), self.mask_id, device=xt.device)
     model_output = torch.scatter(model_output, -1, index, self.neg_infinity)
-
-    # Set logits to -inf for positions that are already unmasked in xt
     model_output = torch.where((xt != self.mask_id)[..., None], self.neg_infinity, model_output)
-
-    # Set logit to 0 for the current token at each position
     model_output = torch.scatter(model_output, -1, xt[..., None], 0.0)
-
-    return torch.log_softmax(model_output, dim=-1)
+    return model_output
 
   def nll_per_token(self, log_x_theta, xt, x0, alpha_t, dalpha_t, low_var=False):
-    """Compute the NLL per token for MDLM.
-    
-    Args:
-        log_x_theta: Log-probabilities of predicted tokens.
-        xt: Noisy input tokens.
-        x0: Target clean tokens.
-        alpha_t: Schedule value.
-        dalpha_t: Schedule derivative.
-        low_var: Use low-variance loss weighting (-1).
-        
-    Returns:
-        Tensor: Weighted NLL values.
-    """
-    log_p_theta = torch.gather(log_x_theta, -1, x0[:, :, None]).squeeze(-1)
+    ce_loss = liger_cross_entropy(
+        log_x_theta.flatten(0, 1),
+        x0.flatten(0, 1),
+        reduction='none'
+    ).view_as(x0)
     loss_coefficient = -1 if low_var else dalpha_t / (1 - alpha_t)
-    return loss_coefficient * log_p_theta
+    return -loss_coefficient * ce_loss
 
   def _get_score(self, x, sigma, group_idxs=None):
     model_output = self.forward(x, sigma, group_idxs)

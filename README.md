@@ -32,6 +32,11 @@ For systems with Flash Attention (CUDA 11.4+), install it after the editable ins
 pip install flash-attn --no-build-isolation
 ```
 
+For optimized cross-entropy computation on CUDA devices, install Liger Kernel:
+```bash
+pip install liger-kernel
+```
+
 For development you can install the extras that power testing and docs:
 ```bash
 pip install -e "[dev]"

@@ -79,6 +79,9 @@ dev = [
 flash-attn = [
     "flash-attn>=2.7.0",
 ]
+liger = [
+    "liger-kernel>=0.4.0",
+]
 
 [project.scripts]
 uni-d2 = "discrete_diffusion.__main__:main"

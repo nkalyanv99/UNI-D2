@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from ..evaluations import BD3Metrics
 from .base import AbsorbingState
@@ -152,11 +153,10 @@ class BD3LM(AbsorbingState):
   # Forward helpers
   # -------------------------------------------------------------------------
   def _subs_parameterization(self, logits, xt):
-    logits[:, :, self.mask_id] += self.neg_infinity
-    logits = logits - torch.logsumexp(logits, dim=-1, keepdim=True)
+    logits[:, :, self.mask_id] = self.neg_infinity
     unmasked_indices = (xt != self.mask_id)
     logits[unmasked_indices] = self.neg_infinity
-    logits[unmasked_indices, xt[unmasked_indices]] = 0
+    logits[unmasked_indices, xt[unmasked_indices]] = 0.0
     return logits
 
   def forward(self, x, sigma, sample_mode=False, store_kv=False):
@@ -267,8 +267,12 @@ class BD3LM(AbsorbingState):
     if self.cross_attn:
       x_input = torch.cat((xt, x0), dim=-1)
     model_output = self.forward(x_input, sigma=sigma)
-    log_p_theta = torch.gather(model_output, -1, x0[:, :, None]).squeeze(-1)
-    loss = loss_scale * log_p_theta
+    ce_loss = F.cross_entropy(
+        model_output.flatten(0, 1),
+        x0.flatten(0, 1),
+        reduction='none'
+    ).view_as(x0)
+    loss = -loss_scale * ce_loss
     return loss
 
   # -------------------------------------------------------------------------

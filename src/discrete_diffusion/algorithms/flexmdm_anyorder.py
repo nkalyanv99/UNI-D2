@@ -11,6 +11,7 @@ import torch.nn.functional as F
 import transformers
 
 from .base import TrainerBase, ensure_mask_token
+from ..utils.utils import liger_cross_entropy
 from ..forward_process.flexmdm import (
   FlexMDMForwardProcess,
   ModelPrediction,
@@ -158,7 +159,7 @@ class FlexMDMAnyOrder(TrainerBase):
     # Unmask loss (token prediction)
     if self.unmask_loss_fn == "elbo":
       mask_indices = interpolant_sample.mask_indices
-      unmask_loss = unmask_weight[mask_indices] * F.cross_entropy(
+      unmask_loss = unmask_weight[mask_indices] * liger_cross_entropy(
         prediction.token_logits[mask_indices],
         interpolant_sample.unmasked[mask_indices],
         reduction="none",
@@ -175,8 +176,10 @@ class FlexMDMAnyOrder(TrainerBase):
       )
       insertion_loss = insertion_loss.sum() / scale_factor
     elif self.insert_loss_fn == "distribution":
-      insertion_loss = insert_weight[gaps_mask] * F.cross_entropy(
-        prediction.length_posterior[gaps_mask], gaps[gaps_mask]
+      insertion_loss = insert_weight[gaps_mask] * liger_cross_entropy(
+        prediction.length_posterior[gaps_mask],
+        gaps[gaps_mask],
+        reduction="none",
       )
       insertion_loss = insertion_loss.sum() / scale_factor
     else:

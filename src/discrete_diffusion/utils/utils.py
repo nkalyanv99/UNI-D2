@@ -241,3 +241,69 @@ def shift_for_next_token(
     shifted_extras.append(tensor[..., 1:].contiguous())
 
   return (shifted_logits, shifted_targets, *shifted_extras)
+
+
+# Try to import Liger Kernel for optimized cross-entropy
+try:
+  from liger_kernel.transformers.cross_entropy import LigerCrossEntropyLoss
+  _LIGER_AVAILABLE = True
+except ImportError:
+  _LIGER_AVAILABLE = False
+
+
+def liger_cross_entropy(
+    input: torch.Tensor,
+    target: torch.Tensor,
+    weight=None,
+    ignore_index: int = -100,
+    reduction: str = "mean",
+    label_smoothing: float = 0.0,
+) -> torch.Tensor:
+  """Cross-entropy loss with optional Liger Kernel optimization.
+
+  Uses Liger Kernel's optimized implementation when available and on CUDA,
+  otherwise falls back to PyTorch's F.cross_entropy.
+
+  Args:
+    input: Logits tensor of shape (N, C) or (N, C, d1, d2, ..., dk).
+    target: Target tensor of shape (N,) or (N, d1, d2, ..., dk).
+    weight: Optional manual rescaling weight for each class.
+    ignore_index: Target value that is ignored.
+    reduction: 'none', 'mean', or 'sum'.
+    label_smoothing: Amount of label smoothing in [0.0, 1.0].
+
+  Returns:
+    The computed cross-entropy loss.
+  """
+  # Use Liger if available and input is on CUDA
+  if _LIGER_AVAILABLE and input.is_cuda:
+    # Flatten to (N, C) format for Liger
+    if input.dim() > 2:
+      input_flat = input.transpose(1, -1).flatten(0, -2)
+      target_flat = target.flatten()
+    else:
+      input_flat = input
+      target_flat = target
+
+    liger_ce = LigerCrossEntropyLoss(
+      weight=weight,
+      ignore_index=ignore_index,
+      label_smoothing=label_smoothing,
+      reduction=reduction,
+    )
+    loss = liger_ce(input_flat, target_flat)
+
+    # Reshape if reduction='none'
+    if reduction == "none":
+      loss = loss.view_as(target)
+    return loss
+  else:
+    # Fall back to PyTorch
+    return torch.nn.functional.cross_entropy(
+      input=input,
+      target=target,
+      weight=weight,
+      ignore_index=ignore_index,
+      reduction=reduction,
+      label_smoothing=label_smoothing,
+    )
