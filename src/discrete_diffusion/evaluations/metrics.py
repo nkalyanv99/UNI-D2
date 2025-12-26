@@ -202,4 +202,102 @@ def _token_entropy(sample: torch.Tensor) -> float:
   return torch.special.entr(probs).sum().item()
 
 
-__all__ = ['Metrics', 'BD3Metrics']
+class GStarMetrics:
+  """Metrics for GStar binary classification (remasker error detection)."""
+  
+  def __init__(self):
+    # Train metrics
+    self.train_accuracy = torchmetrics.classification.BinaryAccuracy()
+    self.train_precision = torchmetrics.classification.BinaryPrecision()
+    self.train_recall = torchmetrics.classification.BinaryRecall()
+    self.train_f1 = torchmetrics.classification.BinaryF1Score()
+    
+    # Validation metrics
+    self.val_accuracy = torchmetrics.classification.BinaryAccuracy()
+    self.val_precision = torchmetrics.classification.BinaryPrecision()
+    self.val_recall = torchmetrics.classification.BinaryRecall()
+    self.val_f1 = torchmetrics.classification.BinaryF1Score()
+
+  def update_train(self, preds: torch.Tensor, targets: torch.Tensor):
+    """Update train metrics with batch predictions and targets.
+    
+    Args:
+        preds: Binary predictions [batch, seq_len] (0 or 1)
+        targets: Binary targets [batch, seq_len] (0 or 1)
+    """
+    # Flatten to [batch * seq_len] for binary classification metrics
+    preds_flat = preds.flatten()
+    targets_flat = targets.flatten()
+    
+    self.train_accuracy.update(preds_flat, targets_flat)
+    self.train_precision.update(preds_flat, targets_flat)
+    self.train_recall.update(preds_flat, targets_flat)
+    self.train_f1.update(preds_flat, targets_flat)
+
+  def update_valid(self, preds: torch.Tensor, targets: torch.Tensor):
+    """Update validation metrics with batch predictions and targets.
+    
+    Args:
+        preds: Binary predictions [batch, seq_len] (0 or 1)
+        targets: Binary targets [batch, seq_len] (0 or 1)
+    """
+    # Flatten to [batch * seq_len] for binary classification metrics
+    preds_flat = preds.flatten()
+    targets_flat = targets.flatten()
+    
+    self.val_accuracy.update(preds_flat, targets_flat)
+    self.val_precision.update(preds_flat, targets_flat)
+    self.val_recall.update(preds_flat, targets_flat)
+    self.val_f1.update(preds_flat, targets_flat)
+
+  def compute_train(self) -> Dict[str, torch.Tensor]:
+    """Compute train metrics.
+    
+    Returns:
+        Dictionary with train/accuracy, train/precision, train/recall, train/f1
+    """
+    return {
+      'train/accuracy': self.train_accuracy.compute(),
+      'train/precision': self.train_precision.compute(),
+      'train/recall': self.train_recall.compute(),
+      'train/f1': self.train_f1.compute(),
+    }
+
+  def compute_valid(self) -> Dict[str, torch.Tensor]:
+    """Compute validation metrics.
+    
+    Returns:
+        Dictionary with val/accuracy, val/precision, val/recall, val/f1
+    """
+    return {
+      'val/accuracy': self.val_accuracy.compute(),
+      'val/precision': self.val_precision.compute(),
+      'val/recall': self.val_recall.compute(),
+      'val/f1': self.val_f1.compute(),
+    }
+
+  def reset(self):
+    """Reset all metrics."""
+    self.train_accuracy.reset()
+    self.train_precision.reset()
+    self.train_recall.reset()
+    self.train_f1.reset()
+    self.val_accuracy.reset()
+    self.val_precision.reset()
+    self.val_recall.reset()
+    self.val_f1.reset()
+
+  def to(self, *args, **kwargs):
+    """Move all metrics to specified device/dtype."""
+    self.train_accuracy = self.train_accuracy.to(*args, **kwargs)
+    self.train_precision = self.train_precision.to(*args, **kwargs)
+    self.train_recall = self.train_recall.to(*args, **kwargs)
+    self.train_f1 = self.train_f1.to(*args, **kwargs)
+    self.val_accuracy = self.val_accuracy.to(*args, **kwargs)
+    self.val_precision = self.val_precision.to(*args, **kwargs)
+    self.val_recall = self.val_recall.to(*args, **kwargs)
+    self.val_f1 = self.val_f1.to(*args, **kwargs)
+    return self
+
+
+__all__ = ['Metrics', 'BD3Metrics', 'GStarMetrics']

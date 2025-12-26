@@ -6,6 +6,7 @@ import hydra
 import lightning as L
 import omegaconf
 import torch
+import torch.serialization
 
 from .data import get_dataloaders, get_tokenizer
 from . import utils
@@ -20,6 +21,14 @@ def train(config):
   Returns:
     None. Model checkpoints are saved according to config.checkpointing.
   """
+  # Add safe globals for checkpoint loading compatibility with PyTorch 2.6+
+  # This allows loading checkpoints that contain numpy dtypes
+  try:
+    import numpy.core.multiarray
+    torch.serialization.add_safe_globals([numpy.core.multiarray.scalar])
+  except (ImportError, AttributeError):
+    pass  # Older PyTorch versions don't need this
+  
   # Set matmul precision to 'high' (TF32) to match FlexMDM
   torch.set_float32_matmul_precision("high")
   
@@ -56,8 +65,9 @@ def train(config):
 
   if config.training.finetune_path != '':
     assert utils.fsspec_exists(config.training.finetune_path)
+    strict_load = config.training.get("strict_load", True)
     model = algo_cls.load_from_checkpoint(
-      config.training.finetune_path, tokenizer=tokenizer, config=config)
+      config.training.finetune_path, strict=strict_load, tokenizer=tokenizer, config=config)
   else:
     model = algo_cls(config, tokenizer=tokenizer)
 

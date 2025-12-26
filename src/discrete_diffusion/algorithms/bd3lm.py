@@ -35,9 +35,6 @@ class BD3LM(AbsorbingState):
     self.mdlm_loss_scale = getattr(self.config.algo, 'mdlm_loss_scale', False)
     self.block_size = getattr(config, 'block_size', self.config.model.length)
     self.var_min = getattr(self.config.algo, 'var_min', False)
-
-    # Override metrics with BD3LM variant
-    self.metrics = BD3Metrics(config)
     
     # Validate noise schedule type (self.noise is set by TrainerBase)
     from ..noise_schedules import LogLinear
@@ -80,6 +77,10 @@ class BD3LM(AbsorbingState):
   # -------------------------------------------------------------------------
   # Lightning hooks
   # -------------------------------------------------------------------------
+  def _initialize_metrics(self):
+    """Override to use BD3LM-specific metrics."""
+    self.metrics = BD3Metrics(self.config)
+
   def to(self, *args, **kwargs):
     self = super().to(*args, **kwargs)
     if hasattr(self.backbone, 'block_diff_mask'):

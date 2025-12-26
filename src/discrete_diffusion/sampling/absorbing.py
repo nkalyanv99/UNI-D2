@@ -15,22 +15,48 @@ class AbsorbingSampler(Sampler):
     self.config = config
     self.forward_process = forward_process
 
-  def compute_posterior(self, model, x, t, dt, p_x0=None,
-                        noise_removal_step=False):
-    alpha_t = model.noise.alpha_t(t)
-    if noise_removal_step:
-      alpha_s = torch.ones_like(alpha_t)
-    else:
-      alpha_s = model.noise.alpha_t(t - dt)
-    assert alpha_t.ndim == 2
+  def _sample_x0(self, model, x, t, p_x0=None):
+    """Sample x0 from model predictions.
+    
+    Args:
+      model: The diffusion model.
+      x: Current sequence [batch, length].
+      t: Current timestep [batch, 1].
+      p_x0: Optional cached probability distribution over x0.
+      
+    Returns:
+      p_x0: Probability distribution over x0 [batch, length, vocab].
+      sampled_x0: Sampled x0 [batch, length].
+    """
     if p_x0 is None:
+      alpha_t = model.noise.alpha_t(t)
       log_p_x0 = model.forward(
         x, model._sigma_from_alphat(alpha_t))
       if self.config.sampling.use_float64:
         log_p_x0 = log_p_x0.to(torch.float64)
       p_x0 = log_p_x0.exp()
-
+    
     sampled_x0 = sample_categorical(p_x0)
+    return p_x0, sampled_x0
+
+  def _mask_tokens_mdlm(self, model, x, sampled_x0, alpha_t, alpha_s):
+    """Apply MDLM masking: denoise only already-masked positions.
+    
+    This implements the standard MDLM denoising strategy where:
+    - Only positions that are currently masked can be denoised
+    - Each masked position is denoised with probability (alpha_s - alpha_t) / (1 - alpha_t)
+    - Once denoised, positions stay denoised (irreversible)
+    
+    Args:
+      model: The diffusion model.
+      x: Current sequence [batch, length].
+      sampled_x0: Sampled x0 from model [batch, length].
+      alpha_t: Noise level at time t [batch, 1].
+      alpha_s: Noise level at time s = t - dt [batch, 1].
+      
+    Returns:
+      out: Partially denoised sequence [batch, length].
+    """
     prob_denoise = (alpha_s - alpha_t) / (1 - alpha_t)
     should_denoise_draw = (
       torch.rand_like(x, dtype=torch.float64, device=x.device)
@@ -39,6 +65,19 @@ class AbsorbingSampler(Sampler):
     should_denoise_mask = is_masked & should_denoise_draw
     _x = torch.where(should_denoise_mask, sampled_x0, x)
     out = torch.where(x != model.mask_id, x, _x)
+    return out
+
+  def compute_posterior(self, model, x, t, dt, p_x0=None,
+                        noise_removal_step=False):
+    alpha_t = model.noise.alpha_t(t)
+    if noise_removal_step:
+      alpha_s = torch.ones_like(alpha_t)
+    else:
+      alpha_s = model.noise.alpha_t(t - dt)
+    assert alpha_t.ndim == 2
+    
+    p_x0, sampled_x0 = self._sample_x0(model, x, t, p_x0)
+    out = self._mask_tokens_mdlm(model, x, sampled_x0, alpha_t, alpha_s)
     return p_x0, out
 
   @torch.no_grad()

@@ -1,0 +1,10 @@
+# @package _global_
+
+base_samples_path: samples
+
+max_length: ???
+checkpoint_path: outputs/owt/mdlm_finetune_len${max_length}/dummy_checkpoints/checkpoints/best.ckpt
+samples_path: ${base_samples_path}/mdlm_len_${max_length}_steps_${num_steps}.pt
+num_samples: 5000
+batch_size: 64
+num_steps: ${max_length}

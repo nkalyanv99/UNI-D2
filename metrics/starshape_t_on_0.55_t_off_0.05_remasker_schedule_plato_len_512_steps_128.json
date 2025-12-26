@@ -1,0 +1,1 @@
+{"file": "starshape_t_on_0.55_t_off_0.05_remasker_schedule_plato_len_512_steps_128", "pretrained_model": "gpt2-large", "median_nll": 2.2406368255615234, "avg_nll": 2.9378018649178683, "ppl": 18.874312392174897, "acc": 0.3979513796730465, "tokens": 2543175, "retokenize": true, "first_chunk_only": true, "num_samples": 5000, "num_devices": 8, "diversity_n": 4, "distinct_n": 0.247}

@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+  - /experiment/sampling/starshape@_global_
+  - override /sampling: gstar
+
+checkpoint_path: outputs/owt/gstar_len${max_length}/dummy_checkpoints/checkpoints/best.ckpt
+samples_path: ${base_samples_path}/gstar_t_on_${sampling.sampler.t_on}_t_off_${sampling.sampler.t_off}_remasker_schedule_${sampling.sampler.remasker_schedule}_len_${max_length}_steps_${num_steps}.pt

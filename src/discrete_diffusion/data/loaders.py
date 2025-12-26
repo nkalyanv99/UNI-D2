@@ -335,12 +335,18 @@ def get_tokenizer(config):
 
 def get_dataloaders(config, tokenizer, skip_train=False,
                     skip_valid=False, valid_seed=None):
-  num_gpus = torch.cuda.device_count()
+  num_gpus = config.trainer.devices
   assert (config.loader.global_batch_size
           == (config.loader.batch_size
               * config.trainer.num_nodes
               * num_gpus
-              * config.trainer.accumulate_grad_batches))
+              * config.trainer.accumulate_grad_batches)), \
+              f"global_batch_size: {config.loader.global_batch_size}, " \
+              f"batch_size: {config.loader.batch_size}, " \
+              f"num_nodes: {config.trainer.num_nodes}, " \
+              f"num_gpus: {num_gpus}, " \
+              f"accumulate_grad_batches: {config.trainer.accumulate_grad_batches}" \
+              f"calculated_global_batch_size: {config.loader.batch_size * config.trainer.num_nodes * num_gpus * config.trainer.accumulate_grad_batches}"
   if config.loader.global_batch_size % (
     num_gpus * config.trainer.accumulate_grad_batches) != 0:
     raise ValueError(

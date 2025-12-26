@@ -33,6 +33,7 @@ datasets/
 
 # Model outputs and checkpoints
 outputs/
+multirun/
 *.ckpt
 *.pth
 *.pt
@@ -57,3 +58,7 @@ tmp*/
 *.bin
 *.h5
 *.hdf5
+
+checkpoints/
+samples/
+example_samples/

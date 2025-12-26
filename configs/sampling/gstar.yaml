@@ -1,0 +1,7 @@
+defaults:
+  - starshape  # Inherit from StarShape config
+
+# Override sampler target to use GStarSampler
+sampler:
+  _target_: discrete_diffusion.sampling.gstar.GStarSampler
+

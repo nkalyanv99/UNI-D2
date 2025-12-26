@@ -118,15 +118,17 @@ class DIT(nn.Module, huggingface_hub.PyTorchModelHubMixin):
     else:
       return  bias_dropout_add_scale_fused_inference
 
-  def forward(self, x, sigma):
+  def forward(self, x, sigma, return_hidden_states: bool = False):
     """Forward pass of the DiT.
     
     Args:
         x: Input token indices [batch, seq_len].
         sigma: Noise level/time embedding [batch] or [batch, seq_len].
+        return_hidden_states: If True, return hidden states after blocks instead of logits.
         
     Returns:
-        Tensor: Logits [batch, seq_len, vocab_size].
+        Tensor: Logits [batch, seq_len, vocab_size] if return_hidden_states=False,
+                otherwise hidden states [batch, seq_len, hidden_size].
     """
     x = self.vocab_embed(x)
     if self.causal:
@@ -139,6 +141,10 @@ class DIT(nn.Module, huggingface_hub.PyTorchModelHubMixin):
     with torch.amp.autocast('cuda', dtype=torch.bfloat16):
       for i in range(len(self.blocks)):
         x = self.blocks[i](x, rotary_cos_sin, c=t_cond)
+      
+      if return_hidden_states:
+        return x  # Return hidden states after blocks, before output_layer
+      
       x = self.output_layer(x, c=t_cond)
 
     return x

@@ -12,6 +12,9 @@ pyyaml==6.0.2
 torchmetrics==1.7.1
 
 # ML
+diversity==0.3.0
+spacy==3.8.11
+openai==2.14.0
 torch==2.7.0
 einops==0.8.1
 fancy-einsum==0.0.3

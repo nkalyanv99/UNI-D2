@@ -17,6 +17,7 @@ from .ar import AR  # noqa: F401
 from .bd3lm import BD3LM  # noqa: F401
 from .flexmdm_anyorder import FlexMDMAnyOrder  # noqa: F401
 from .gidd import GIDD  # noqa: F401
+from .gstar import GStar  # noqa: F401
 from .mdlm import MDLM  # noqa: F401
 from .partition_mdlm import PartitionMDLM  # noqa: F401
 from .sedd import SEDD  # noqa: F401
@@ -27,6 +28,7 @@ __all__ = [
   'BD3LM',
   'FlexMDMAnyOrder',
   'GIDD',
+  'GStar',
   'MDLM',
   'PartitionMDLM',
   'SEDD',
