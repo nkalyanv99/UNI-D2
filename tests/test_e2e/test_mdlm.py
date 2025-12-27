@@ -4,6 +4,9 @@ from tests.helpers.run_sh_command import run_sh_command
 from tests.conftest import RunIf
 
 
+MDLM_CHECKPOINT_PATH = "/tmp/test_mdlm/dummy_checkpoints/checkpoints/last.ckpt"
+
+
 @RunIf(min_gpus=1)
 def test_mdlm_training():
     """Test MDLM training runs end-to-end with minimal config."""
@@ -21,6 +24,9 @@ def test_mdlm_training():
             "loader.global_batch_size=2",
             "trainer.limit_val_batches=2",
             "model.length=16",
+            # Save checkpoint for GStar test
+            "callbacks.checkpoint_every_n_steps.every_n_train_steps=50",
+            "callbacks.checkpoint_every_n_steps.save_last=true",
         ],
         env={"PYTHONPATH": "src"},
     )

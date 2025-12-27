@@ -1,0 +1,12 @@
+# @package _global_
+
+defaults:
+  - mdlm
+  - override /algo: gstar
+
+hydra:
+  run:
+    dir: ./outputs/${data.train}/gstar
+
+wandb:
+  name: gstar_${data.train}
