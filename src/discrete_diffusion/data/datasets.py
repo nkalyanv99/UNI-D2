@@ -26,17 +26,23 @@ __all__ = [
 
 
 def _generate_synthetic_data(dataset_size, seq_len, vocab_size):
+  # Special tokens: BOS, EOS, PAD, MASK, UNK (5 total)
+  num_special = 5
+  num_regular = vocab_size - num_special
+  bos_id = num_regular      # BOS token id
+  eos_id = num_regular + 1  # EOS token id
+  
   dataset = np.zeros((dataset_size, seq_len), dtype=int)
-  dataset[:, 0] = vocab_size - 2  # bos
-  dataset[:, -1] = vocab_size - 1  # eos
+  dataset[:, 0] = bos_id
+  dataset[:, -1] = eos_id
   for i in range(dataset_size):
-    temp = np.random.randint(vocab_size - 2)
+    temp = np.random.randint(num_regular)
     for j in reversed(range(1, seq_len - 1)):
       dataset[i, j] = temp
       if temp != 0:
         temp = temp // 4
       else:
-        temp = np.random.randint(vocab_size - 2)
+        temp = np.random.randint(num_regular)
   return dataset
 
 

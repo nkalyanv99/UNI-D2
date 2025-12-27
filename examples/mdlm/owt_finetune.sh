@@ -38,7 +38,7 @@ python -u -m discrete_diffusion \
     training.torch_compile=false \
     loader.batch_size=16 \
     loader.eval_batch_size=16 \
-    loader.global_batch_size=512 \
+    loader.global_batch_size=512 \  
     loader.num_workers=32 \
     trainer.num_nodes=1 \
     trainer.devices=8 \

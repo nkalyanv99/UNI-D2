@@ -1,5 +1,4 @@
 defaults:
-  - _self_
   - /callbacks:
     - checkpoint_every_n_steps
     - checkpoint_monitor
@@ -13,6 +12,8 @@ defaults:
   - /prior: none
   - /sampling: default
   - /algo: bd3lm
+  - _self_
+  - experiment: null
 
 seed: 1
 

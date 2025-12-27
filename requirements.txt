@@ -51,3 +51,7 @@ mkdocs
 mkdocs-material
 mkdocstrings[python]
 mkdocs-include-markdown-plugin
+
+# Testing
+pytest
+sh

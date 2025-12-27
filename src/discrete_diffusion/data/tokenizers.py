@@ -14,6 +14,9 @@ __all__ = [
 class SyntheticTokenizer(transformers.PreTrainedTokenizer):
   """Simple synthetic tokenizer for deterministic experiments."""
 
+  # Number of special tokens: BOS, EOS, PAD, MASK, UNK
+  NUM_SPECIAL_TOKENS = 5
+
   def __init__(
     self,
     vocab_size,
@@ -21,17 +24,23 @@ class SyntheticTokenizer(transformers.PreTrainedTokenizer):
     eos_token="[EOS]",
     sep_token=None,
     cls_token=None,
-    pad_token=None,
-    mask_token=None,
-    unk_token=None,
+    pad_token="[PAD]",
+    mask_token="[MASK]",
+    unk_token="[UNK]",
     **kwargs):
     
+    # Regular tokens: 0 to vocab_size - NUM_SPECIAL_TOKENS - 1
+    # Special tokens at the end
+    num_regular = vocab_size - self.NUM_SPECIAL_TOKENS
     self.tokens = []
-    for i in range(vocab_size - 2):
+    for i in range(num_regular):
       self.tokens.append(str(i) + " ")
     self._vocab_str_to_int = {
-      '[BOS]': vocab_size - 2,
-      '[EOS]': vocab_size - 1,
+      '[BOS]': num_regular,
+      '[EOS]': num_regular + 1,
+      '[PAD]': num_regular + 2,
+      '[MASK]': num_regular + 3,
+      '[UNK]': num_regular + 4,
       **{ch: i for i, ch in enumerate(self.tokens)}}
     self._vocab_int_to_str = {
       v: k for k, v in self._vocab_str_to_int.items()}
