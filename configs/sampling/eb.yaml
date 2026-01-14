@@ -1,0 +1,21 @@
+# configs/sampling/eb.yaml
+
+predictor: eb
+
+# EB-Sampler performs *adaptive* any-order unmasking, so the actual number of
+# steps depends on the sample. We interpret `steps` as a safety cap.
+steps: ${model.length}
+
+use_float64: False
+p_nucleus: 1.0
+num_sample_batches: 1
+num_sample_log: 2
+inject_bos: True
+
+sampler:
+  _target_: discrete_diffusion.sampling.eb_sampler.EBSampler
+  # Entropy budget (nats). gamma=0 -> one token per step.
+  gamma: 0.1
+  # Ordering proxy: entropy | confidence | margin
+  error_proxy: entropy
+  temperature: 1.0
