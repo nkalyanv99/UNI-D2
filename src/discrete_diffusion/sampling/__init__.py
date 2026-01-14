@@ -9,6 +9,7 @@ from .bd3lm import BD3LMSampler
 from .gidd import GIDDSampler
 from .partition import PartitionSampler
 from .uniform import UniformSampler
+from .eb_sampler import EBSampler
 
 __all__ = [
   "Sampler",
@@ -18,4 +19,5 @@ __all__ = [
   "GIDDSampler",
   "PartitionSampler",
   "UniformSampler",
+  "EBSampler",
 ]
