@@ -95,6 +95,7 @@ nav:
           - AR: reference/sampling/ar.md
           - BD3LM: reference/sampling/bd3lm.md
           - CANDI: reference/sampling/candi.md
+          - EB: reference/sampling/eb.md
           - FlexMDM: reference/sampling/flexmdm.md
           - GIDD: reference/sampling/gidd.md
           - Partition: reference/sampling/partition.md

@@ -10,7 +10,7 @@ Moving beyond the constraints of autoregressive modeling, UNI-D² brings the ben
 
 ## Highlights
 - Hydra + Lightning entry point (`python -m discrete_diffusion`) for experimenting with MDLM, UDLM, BD3LM, FlexMDM, GIDD, SEDD, PartitionMDLM, and CANDI papers.
-- Sampling helpers that cover absorbing, BD3LM, GIDD, partition, uniform, autoregressive, FlexMDM, and CANDI samplers plus a reusable `scripts/generate_samples.sh` wrapper.
+- Sampling helpers that cover absorbing, BD3LM, GIDD, partition, uniform, autoregressive, FlexMDM, CANDI, and Entropy-Bounded (EB) samplers plus a reusable `scripts/generate_samples.sh` wrapper.
 - Scripts that reproduce training recipes for datasets such as LM1B, OWT, and Text8.
 
 ## Getting Started
