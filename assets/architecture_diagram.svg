@@ -1,0 +1,80 @@
+<svg width="800" height="550" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <!-- Definitions -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#555" />
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="1" dy="1" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="hatched" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="10" style="stroke:#eceff1; stroke-width:2" />
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#ffffff" />
+
+  <!-- ALGORITHM CONTAINER -->
+  <rect x="10" y="40" width="750" height="480" rx="15" fill="url(#hatched)" stroke="#546e7a" stroke-width="2" stroke-dasharray="5,5" />
+  <text x="30" y="75" font-weight="bold" font-size="18" fill="#37474f">Algorithm (LightningModule)</text>
+  <text x="30" y="95" font-size="12" fill="#546e7a">Orchestrates components &amp; specific loss logic</text>
+
+  <!-- DATA INPUT -->
+  <text x="20" y="250" text-anchor="start" font-weight="bold" font-size="14" fill="#333">Data x_0</text>
+  <line x1="80" y1="245" x2="118" y2="245" stroke="#333" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- FORWARD PROCESS CONTAINER (Reduced Size) -->
+  <rect x="120" y="150" width="220" height="240" rx="10" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2" filter="url(#shadow)" />
+  <text x="230" y="175" text-anchor="middle" font-weight="bold" font-size="14" fill="#4a148c">Forward Process</text>
+  <text x="230" y="190" text-anchor="middle" font-size="10" fill="#6a1b9a">q(x_t | x_0)</text>
+
+    <!-- NOISE SCHEDULE (Inside FP) -->
+    <rect x="140" y="210" width="180" height="50" rx="6" fill="#e0f2f1" stroke="#00695c" stroke-width="2" />
+    <text x="230" y="235" text-anchor="middle" font-weight="bold" font-size="12" fill="#004d40">Noise Schedule</text>
+    <text x="230" y="250" text-anchor="middle" font-size="10" fill="#00695c">Determines t</text>
+
+    <!-- Noise Application Logic -->
+    <circle cx="230" cy="310" r="4" fill="#7b1fa2" />
+    <text x="230" y="330" text-anchor="middle" font-size="12" fill="#4a148c" font-style="italic">Apply Noise</text>
+    
+    <!-- Internal Flow: Schedule -> Application -->
+    <line x1="230" y1="260" x2="230" y2="300" stroke="#7b1fa2" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- BACKBONE MODEL -->
+  <rect x="440" y="150" width="200" height="100" rx="10" fill="#fff3e0" stroke="#e65100" stroke-width="2" filter="url(#shadow)" />
+  <text x="540" y="195" text-anchor="middle" font-weight="bold" font-size="14" fill="#bf360c">Backbone Model</text>
+  <text x="540" y="215" text-anchor="middle" font-size="10" fill="#d84315">Denoising Network</text>
+
+  <!-- LOSS FUNCTION -->
+  <rect x="440" y="320" width="240" height="80" rx="10" fill="#ffebee" stroke="#c62828" stroke-width="2" filter="url(#shadow)" />
+  <text x="560" y="355" text-anchor="middle" font-weight="bold" font-size="14" fill="#b71c1c">Loss Function</text>
+  <text x="560" y="375" text-anchor="middle" font-size="12" font-family="monospace" fill="#c62828">L(x_0, f_θ(x_t))</text>
+
+  <!-- CONNECTIONS -->
+
+  <!-- FP Output: x_t -> Model -->
+  <line x1="340" y1="200" x2="438" y2="200" stroke="#555" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="390" y="190" text-anchor="middle" font-size="12" fill="#555" font-weight="bold">x_t</text>
+
+  <!-- FP Output: t -> Model (Curved) -->
+  <path d="M320,235 Q380,245 438,220" stroke="#555" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow)" fill="none" />
+  <text x="380" y="245" text-anchor="middle" font-size="10" fill="#555">t</text>
+
+  <!-- Model Output: Prediction -> Loss -->
+  <line x1="540" y1="250" x2="540" y2="318" stroke="#555" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="550" y="290" text-anchor="start" font-size="12" fill="#555" font-family="monospace">f_θ(x_t)</text>
+
+  <!-- x_0 bypass to Loss -->
+  <path d="M100,245 L100,440 L580,440 L580,402" stroke="#333" stroke-width="2" marker-end="url(#arrow)" fill="none" />
+  <text x="340" y="430" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">x_0</text>
+
+</svg>
