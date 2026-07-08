@@ -155,8 +155,9 @@ class Rotary(torch.nn.Module):
 
     if seq_len != self.seq_len_cached:
       self.seq_len_cached = seq_len
-      t = torch.arange(seq_len, device=device).type_as(self.inv_freq)
-      freqs = torch.einsum("i,j->ij", t, self.inv_freq.clone())
+      inv_freq = self.inv_freq.to(device=device, dtype=torch.float32)
+      t = torch.arange(seq_len, device=device, dtype=torch.float32)
+      freqs = torch.einsum("i,j->ij", t, inv_freq)
       emb = torch.cat((freqs, freqs), dim=-1).to(device)
       # dims are: batch, seq_len, qkv, head, dim
       self.cos_cached = emb.cos()[None, :, None, None, :].repeat(1, 1, 3, 1, 1)
